@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.rmi.RemoteException;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -326,6 +325,7 @@ public class Server {
         }
         setServerStatus(ServerStatus.SERVER_WORK);
         WebSocketSession clientFileInfoSession = clientFileInfoSessionHashMap.get(login);
+        WebSocketSession clientFilePartSession = clientFilePartSessionHashMap.get(login);
         if (clientFileInfoSession == null) {
             Logger.log("Login not correct");
             return false;
@@ -395,9 +395,9 @@ public class Server {
                     filePart.setFileInfo(fileInfo);
                     filePartSentRepository.save(filePart);
                 }
-                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientInt);
+                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
             case TRANSFER_PROCESS:
-                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientInt);
+                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
             case TRANSFERRED:
                 return true;
         }
@@ -408,7 +408,7 @@ public class Server {
 
     public boolean sendAllFilePartsToClient(LinkedHashMap<Integer, FilePartDTO> filePartHashMap,
                                              FileInfoDTO fileInfoDTO,
-                                             ClientInt clientInt) {
+                                             WebSocketSession clientFilePartSession) {
         FileInfoSent fileInfo = fileInfoSentRepository.findByHash(fileInfoDTO.getHash());
         fileInfo.setFileStatus(FileStatus.TRANSFER_PROCESS);
         fileInfo = fileInfoSentRepository.save(fileInfo);
@@ -424,9 +424,14 @@ public class Server {
                 .get();
         FilePartDTO firstNotSentFilePartDTOFromClient = null;
         try {
-            firstNotSentFilePartDTOFromClient =
-                    clientInt.getFirstNotSentFilePartFromClient(fileInfoDTO);
-        } catch (RemoteException e) {
+            WebSocketSession clientFirstFilePartSession =
+                    clientFirstFilePartSessionHashMap.get(fileInfo.getClient().getLogin());
+//            firstNotSentFilePartDTOFromClient = todo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+                     clientFirstFilePartSession
+                             .sendMessage(
+                                     new org.springframework.web.socket.TextMessage(
+                                             mapper.writeValueAsString(fileInfoDTO)));
+        } catch (IOException e) {
             e.printStackTrace();
             return false;
         }
@@ -448,7 +453,7 @@ public class Server {
             } else {
                 firstNotSentFilePart.setStatus(FilePartStatus.SENT);
             }
-            sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientInt);
+            sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
         } else {
             fileProgressBar.setMinimum(0);
             fileProgressBar.setMaximum((int) fileInfoDTO.getSize());
@@ -458,7 +463,7 @@ public class Server {
                     FilePartDTO filePartDTOToSend = filePartHashMap.get(i);
                     FilePartSent filePartToSend = filePartList.get(i - 1);
 
-                    sendFilePartToClient(filePartDTOToSend, clientInt);
+                    sendFilePartToClient(filePartDTOToSend, clientFilePartSession);
 
                     filePartToSend.setStatus(FilePartStatus.SENT);
                     filePartSentRepository.save(filePartToSend);
@@ -475,16 +480,20 @@ public class Server {
         return true;
     }
 
-    public boolean sendFilePartToClient(FilePartDTO filePartDTO, ClientInt clientInt) {
-        boolean result = false;
+    public boolean sendFilePartToClient(FilePartDTO filePartDTO, WebSocketSession clientFilePartSession) {
+        boolean result = true;
         try {
-            result = clientInt.sendFilePartToClient(filePartDTO);
+            clientFilePartSession.
+                    sendMessage(
+                            new org.springframework.web.socket.TextMessage(
+                                    mapper.writeValueAsString(filePartDTO)));
             //Thread.sleep(2000);
-        } catch (RemoteException e) {
+        } catch (IOException e) {
+            result = false;
             e.printStackTrace();
             return false;
         }
-        logger.log(String.valueOf(result));
+        Logger.log(String.valueOf(result));
         if (result) {
             FilePartSent filePartSent = filePartSentRepository.findByHashKey(filePartDTO.getHashKey());
             filePartSent.setStatus(FilePartStatus.SENT);

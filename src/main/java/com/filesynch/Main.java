@@ -5,7 +5,12 @@ import com.filesynch.entity.FileInfoReceived;
 import com.filesynch.entity.FileInfoSent;
 import com.filesynch.gui.FileSynchronizationServer;
 import com.filesynch.gui.NewClient;
+import com.filesynch.server.Logger;
 import com.filesynch.server.Server;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.swing.*;
@@ -13,29 +18,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.RMISocketFactory;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Main {
+@SpringBootApplication
+public class Main extends SpringBootServletInitializer {
     public static JFrame serverFrame;
     public static FileSynchronizationServer fileSynchronizationServer;
-    public static Server server = new Server();
-    public static Registry registry;
+    public static Server server;
+    private static String[] stringArgs;
+    private static ConfigurableApplicationContext ctx;
 
     public static void main(String[] args) {
-        System.setProperty("java.security.policy","src/main/resources/.java.policy");
-        System.setProperty("java.rmi.server.hostname", "192.168.0.4");
-        //System.setProperty("java.rmi.server.hostname", "46.219.216.25");
-
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
-        }
         serverFrame = new JFrame("File Synchronization Server");
         fileSynchronizationServer = new FileSynchronizationServer();
         serverFrame.setContentPane(fileSynchronizationServer.getJPanelServer());
@@ -43,26 +39,19 @@ public class Main {
         serverFrame.pack();
         serverFrame.setLocationRelativeTo(null);
         serverFrame.setVisible(true);
+        stringArgs = args;
     }
 
     public static void startServer(int port) {
         if (server == null || server.getServerStatus() == ServerStatus.SERVER_STANDBY_FULL) {
             try {
                 server = new Server();
-                RMISocketFactory.setSocketFactory(new FixedPortRMISocketFactory());
-                ServerInt stub = (ServerInt) UnicastRemoteObject.exportObject(server, 20);
+                ctx = SpringApplication.run(Main.class, stringArgs);
 
-                LocateRegistry.createRegistry(port);
-                Registry registry = LocateRegistry.getRegistry(port);
-                registry.rebind("fs", stub);
-                System.out.println("HelloImpl bound in registry");
-
-                Logger logger = new Logger();
-                logger.log = fileSynchronizationServer.getJTextAreaLog();
+                Logger.log = fileSynchronizationServer.getJTextAreaLog();
                 fileSynchronizationServer.getJLabelServerInfoValue().setText("127.0.0.1:" + port);
-                server.setLogger(logger);
                 server.setFileProgressBar(fileSynchronizationServer.getJProgressBarFile());
-                server.getLogger().log("File Server Started");
+                Logger.log("File Server Started");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -71,14 +60,10 @@ public class Main {
         updateFileQueue();
     }
 
-    public static void stopServer(int port) {
+    public static void stopServer() {
         if (server.getServerStatus() == ServerStatus.SERVER_WORK || server.getServerStatus() == ServerStatus.SERVER_STANDBY_TRANSFER) {
-            try {
-                UnicastRemoteObject.unexportObject(registry, true);
-                server.getLogger().log("File Server Stopped");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            SpringApplication.exit(ctx);
+            Logger.log("File Server Stopped");
         }
     }
 

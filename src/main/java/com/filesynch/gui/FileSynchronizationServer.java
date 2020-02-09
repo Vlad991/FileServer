@@ -79,7 +79,7 @@ public class FileSynchronizationServer {
         jButtonStopServer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Main.stopServer(20);
+                Main.stopServer();
                 Main.server.setServerStatus(ServerStatus.SERVER_STANDBY_FULL);
                 jLabelServerStatusValue.setText(ServerStatus.SERVER_STANDBY_FULL.getStatus());
                 jLabelServerStatusValue.setForeground(Color.RED);
