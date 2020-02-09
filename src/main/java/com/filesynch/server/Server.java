@@ -48,7 +48,7 @@ public class Server {
     private FilePartSentRepository filePartSentRepository;
     private TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1024*100; // in bytes (100 kB)
+    private final int FILE_PART_SIZE = 1024 * 100; // in bytes (100 kB)
     public final String FILE_INPUT_DIRECTORY = "src/main/resources/in/";
     public final String FILE_OUTPUT_DIRECTORY = "src/main/resources/out/";
     @Getter
@@ -407,8 +407,8 @@ public class Server {
     }
 
     public boolean sendAllFilePartsToClient(LinkedHashMap<Integer, FilePartDTO> filePartHashMap,
-                                             FileInfoDTO fileInfoDTO,
-                                             WebSocketSession clientFilePartSession) {
+                                            FileInfoDTO fileInfoDTO,
+                                            WebSocketSession clientFilePartSession) {
         FileInfoSent fileInfo = fileInfoSentRepository.findByHash(fileInfoDTO.getHash());
         fileInfo.setFileStatus(FileStatus.TRANSFER_PROCESS);
         fileInfo = fileInfoSentRepository.save(fileInfo);
@@ -426,12 +426,17 @@ public class Server {
         try {
             WebSocketSession clientFirstFilePartSession =
                     clientFirstFilePartSessionHashMap.get(fileInfo.getClient().getLogin());
-//            firstNotSentFilePartDTOFromClient = todo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-                     clientFirstFilePartSession
-                             .sendMessage(
-                                     new org.springframework.web.socket.TextMessage(
-                                             mapper.writeValueAsString(fileInfoDTO)));
-        } catch (IOException e) {
+            synchronized (clientFirstFilePartSession) {
+                clientFirstFilePartSession.getAttributes().put("first_f_p", "true");
+                clientFirstFilePartSession
+                        .sendMessage(
+                                new org.springframework.web.socket.TextMessage(
+                                        mapper.writeValueAsString(fileInfoDTO)));
+                clientFilePartSession.wait();
+                firstNotSentFilePartDTOFromClient =
+                        (FilePartDTO) clientFilePartSession.getAttributes().get("first_file_part");
+            }
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }

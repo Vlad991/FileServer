@@ -32,9 +32,17 @@ public class FilePartWebSocket extends TextWebSocketHandler {
             String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
+            if (session.getAttributes().get("first_f_p").equals("true")) {
+                WebSocketSession clientFirstFilePartSession = server.getClientFirstFilePartSessionHashMap().get(login);
+                synchronized (clientFirstFilePartSession) {
+                    clientFirstFilePartSession.getAttributes().put("first_file_part", filePartDTO);
+                    clientFirstFilePartSession.notify();
+                }
+                return;
+            }
             boolean result = server.sendFilePartToServer(login, filePartDTO);
             TextMessage textMessage = new TextMessage(mapper.writeValueAsString(result));
-            session.sendMessage(textMessage);
+            server.getClientTextMessageSessionHashMap().get(login).sendMessage(textMessage);
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }

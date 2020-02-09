@@ -25,8 +25,8 @@ public class LoginWebSocket extends TextWebSocketHandler {
             //String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
             String jsonString = message.getPayload();
             ClientInfoDTO clientInfoDTO = mapper.readValue(jsonString, ClientInfoDTO.class);
-            String result = server.loginToServer(clientInfoDTO, session);
-            TextMessage textMessage = new TextMessage(mapper.writeValueAsString(result));
+            String login = server.loginToServer(clientInfoDTO, session);
+            TextMessage textMessage = new TextMessage(mapper.writeValueAsString(login));
             session.sendMessage(textMessage); // todo first get textmesssage session
         } catch (IOException e) {
             Logger.log(e.getMessage());
