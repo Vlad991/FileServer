@@ -8,6 +8,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.context.annotation.PropertySource;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -88,7 +89,7 @@ public class FileSynchronizationServer {
         jButtonStartServer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Main.startServer(20);
+                Main.startServer(8087);
                 Main.server.setServerStatus(ServerStatus.SERVER_WORK);
                 jLabelServerStatusValue.setText(ServerStatus.SERVER_WORK.getStatus());
                 jLabelServerStatusValue.setForeground(Color.GREEN);

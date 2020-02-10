@@ -49,8 +49,8 @@ public class Server {
     private TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
     private final int FILE_PART_SIZE = 1024 * 100; // in bytes (100 kB)
-    public final String FILE_INPUT_DIRECTORY = "src/main/resources/in/";
-    public final String FILE_OUTPUT_DIRECTORY = "src/main/resources/out/";
+    public final String FILE_INPUT_DIRECTORY = "input_files/";
+    public final String FILE_OUTPUT_DIRECTORY = "output_files/";
     @Getter
     private HashMap<String, WebSocketSession> loginSessionHashMap = new HashMap<>();
     @Getter
@@ -87,6 +87,7 @@ public class Server {
     public String loginToServer(ClientInfoDTO clientInfoDTO, WebSocketSession clientLoginSession) {
         Logger.log(clientInfoDTO.toString());
         String login = null;
+        ClientInfo clientInfoTest = clientInfoRepository.findByLogin(clientInfoDTO.getLogin());
         if (clientInfoDTO.getLogin() != null && clientInfoRepository.findByLogin(clientInfoDTO.getLogin()) != null) {
             login = clientInfoDTO.getLogin();
         } else {
@@ -125,6 +126,7 @@ public class Server {
             Logger.log(textMessage.getMessage());
             return "Message Received!";
         } else {
+            System.out.println(message);
             return "You are not logged in!";
         }
     }

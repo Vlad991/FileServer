@@ -1,8 +1,10 @@
-package com.filesynch.server;
+package com.filesynch.server.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filesynch.Main;
 import com.filesynch.dto.FilePartDTO;
+import com.filesynch.server.Logger;
+import com.filesynch.server.Server;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -17,22 +19,18 @@ public class FilePartWebSocket extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
-        if (!server.clientIsLoggedIn(login)) {
-            TextMessage textMessage = new TextMessage(mapper.writeValueAsString("You are not logged in"));
-            session.sendMessage(textMessage);
-            session.close();
-        }
-        server.getClientFilePartSessionHashMap().put(login, session);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+            if (server.getClientFilePartSessionHashMap().get(login) == null) {
+                server.getClientFilePartSessionHashMap().put(login, session);
+            }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            if (session.getAttributes().get("first_f_p").equals("true")) {
+            if (filePartDTO.getOrder() == 1) {
                 WebSocketSession clientFirstFilePartSession = server.getClientFirstFilePartSessionHashMap().get(login);
                 synchronized (clientFirstFilePartSession) {
                     clientFirstFilePartSession.getAttributes().put("first_file_part", filePartDTO);

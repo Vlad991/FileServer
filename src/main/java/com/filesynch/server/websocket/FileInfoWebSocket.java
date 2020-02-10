@@ -1,8 +1,10 @@
-package com.filesynch.server;
+package com.filesynch.server.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filesynch.Main;
 import com.filesynch.dto.FileInfoDTO;
+import com.filesynch.server.Logger;
+import com.filesynch.server.Server;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -17,24 +19,20 @@ public class FileInfoWebSocket extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
-        if (!server.clientIsLoggedIn(login)) {
-            TextMessage textMessage = new TextMessage(mapper.writeValueAsString("You are not logged in"));
-            session.sendMessage(textMessage);
-            session.close();
-        }
-        server.getClientFileInfoSessionHashMap().put(login, session);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+            if (server.getClientFileInfoSessionHashMap().get(login) == null) {
+                server.getClientFileInfoSessionHashMap().put(login, session);
+            }
             String jsonString = message.getPayload();
             FileInfoDTO fileInfoDTO = mapper.readValue(jsonString, FileInfoDTO.class);
             boolean result = server.sendFileInfoToServer(login, fileInfoDTO);
-            TextMessage textMessage = new TextMessage(mapper.writeValueAsString(result));
-            session.sendMessage(textMessage);
+            TextMessage textMessage = new TextMessage(String.valueOf(result));
+            server.getClientTextMessageSessionHashMap().get(login).sendMessage(textMessage);
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }

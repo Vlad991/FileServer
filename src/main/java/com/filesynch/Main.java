@@ -48,7 +48,7 @@ public class Main extends SpringBootServletInitializer {
                 server = new Server();
                 ctx = SpringApplication.run(Main.class, stringArgs);
 
-                Logger.log = fileSynchronizationServer.getJTextAreaLog();
+                Logger.logArea = fileSynchronizationServer.getJTextAreaLog();
                 fileSynchronizationServer.getJLabelServerInfoValue().setText("127.0.0.1:" + port);
                 server.setFileProgressBar(fileSynchronizationServer.getJProgressBarFile());
                 Logger.log("File Server Started");
