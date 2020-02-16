@@ -30,7 +30,10 @@ public class FilePartWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            if (filePartDTO.getOrder() == 1) {
+            if (filePartDTO.getOrder() == 0) {
+                return;
+            }
+            if (filePartDTO.getOrder() == 1 && filePartDTO.getHashKey() == null) {
                 WebSocketSession clientFirstFilePartSession = server.getClientFirstFilePartSessionHashMap().get(login);
                 synchronized (clientFirstFilePartSession) {
                     clientFirstFilePartSession.getAttributes().put("first_file_part", filePartDTO);

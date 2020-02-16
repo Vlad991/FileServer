@@ -2,7 +2,6 @@ package com.filesynch.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filesynch.Main;
-import com.filesynch.configuration.DataConfig;
 import com.filesynch.converter.*;
 import com.filesynch.dto.*;
 import com.filesynch.entity.*;
@@ -10,7 +9,9 @@ import com.filesynch.gui.NewClient;
 import com.filesynch.repository.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.swing.*;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Service
 public class Server {
     @Getter
     @Setter
@@ -37,18 +39,18 @@ public class Server {
     private FilePartSentConverter filePartSentConverter;
     private TextMessageConverter textMessageConverter;
     @Getter
-    private ClientInfoRepository clientInfoRepository;
+    private final ClientInfoRepository clientInfoRepository;
     @Getter
-    private FileInfoReceivedRepository fileInfoReceivedRepository;
+    private final FileInfoReceivedRepository fileInfoReceivedRepository;
     @Getter
-    private FileInfoSentRepository fileInfoSentRepository;
+    private final FileInfoSentRepository fileInfoSentRepository;
     @Getter
-    private FilePartReceivedRepository filePartReceivedRepository;
+    private final FilePartReceivedRepository filePartReceivedRepository;
     @Getter
-    private FilePartSentRepository filePartSentRepository;
-    private TextMessageRepository textMessageRepository;
+    private final FilePartSentRepository filePartSentRepository;
+    private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1024 * 100; // in bytes (100 kB)
+    private final int FILE_PART_SIZE = 1024; // in bytes (100 kB)
     public final String FILE_INPUT_DIRECTORY = "input_files/";
     public final String FILE_OUTPUT_DIRECTORY = "output_files/";
     @Getter
@@ -65,16 +67,7 @@ public class Server {
     private JProgressBar fileProgressBar;
     private ObjectMapper mapper = new ObjectMapper();
 
-    public Server() {
-        AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
-        ctx.register(DataConfig.class);
-        ctx.refresh();
-        clientInfoRepository = ctx.getBean(ClientInfoRepository.class);
-        fileInfoReceivedRepository = ctx.getBean(FileInfoReceivedRepository.class);
-        fileInfoSentRepository = ctx.getBean(FileInfoSentRepository.class);
-        filePartReceivedRepository = ctx.getBean(FilePartReceivedRepository.class);
-        filePartSentRepository = ctx.getBean(FilePartSentRepository.class);
-        textMessageRepository = ctx.getBean(TextMessageRepository.class);
+    public Server(ClientInfoRepository clientInfoRepository, FileInfoReceivedRepository fileInfoReceivedRepository, FileInfoSentRepository fileInfoSentRepository, FilePartReceivedRepository filePartReceivedRepository, FilePartSentRepository filePartSentRepository, TextMessageRepository textMessageRepository) {
         clientInfoConverter = new ClientInfoConverter();
         fileInfoReceivedConverter = new FileInfoReceivedConverter(clientInfoConverter);
         fileInfoSentConverter = new FileInfoSentConverter(clientInfoConverter);
@@ -82,6 +75,12 @@ public class Server {
         filePartSentConverter = new FilePartSentConverter(clientInfoConverter, fileInfoSentConverter);
         textMessageConverter = new TextMessageConverter(clientInfoConverter);
         serverStatus = ServerStatus.SERVER_STANDBY_FULL;
+        this.clientInfoRepository = clientInfoRepository;
+        this.fileInfoReceivedRepository = fileInfoReceivedRepository;
+        this.fileInfoSentRepository = fileInfoSentRepository;
+        this.filePartReceivedRepository = filePartReceivedRepository;
+        this.filePartSentRepository = filePartSentRepository;
+        this.textMessageRepository = textMessageRepository;
     }
 
     public String loginToServer(ClientInfoDTO clientInfoDTO, WebSocketSession clientLoginSession) {
@@ -429,7 +428,6 @@ public class Server {
             WebSocketSession clientFirstFilePartSession =
                     clientFirstFilePartSessionHashMap.get(fileInfo.getClient().getLogin());
             synchronized (clientFirstFilePartSession) {
-                clientFirstFilePartSession.getAttributes().put("first_f_p", "true");
                 clientFirstFilePartSession
                         .sendMessage(
                                 new org.springframework.web.socket.TextMessage(

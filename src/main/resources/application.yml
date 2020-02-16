@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    username: kzm_vlad
+    password: 123root@
+    driverClassName: com.mysql.cj.jdbc.Driver
+    driverDialect: org.hibernate.dialect.MySQLDialect
+    url: jdbc:mysql://localhost:3306/fs_server_db
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  main:
+    allow-bean-definition-overriding: true
+
+server:
+  port: 8087
+
+logging:
+  level:
+    root: INFO

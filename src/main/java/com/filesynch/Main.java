@@ -45,8 +45,8 @@ public class Main extends SpringBootServletInitializer {
     public static void startServer(int port) {
         if (server == null || server.getServerStatus() == ServerStatus.SERVER_STANDBY_FULL) {
             try {
-                server = new Server();
                 ctx = SpringApplication.run(Main.class, stringArgs);
+                server = ctx.getBean(Server.class);
 
                 Logger.logArea = fileSynchronizationServer.getJTextAreaLog();
                 fileSynchronizationServer.getJLabelServerInfoValue().setText("127.0.0.1:" + port);
