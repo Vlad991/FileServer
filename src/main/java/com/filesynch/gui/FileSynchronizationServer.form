@@ -287,7 +287,7 @@
                     </constraints>
                     <properties>
                       <foreground color="-2537940"/>
-                      <text value="SERVER_STANDBY_FULL"/>
+                      <text value="SERVER_STOP"/>
                     </properties>
                   </component>
                   <component id="28a94" class="javax.swing.JButton" binding="jButtonStartServer">

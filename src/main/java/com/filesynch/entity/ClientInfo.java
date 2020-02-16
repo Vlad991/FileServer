@@ -18,10 +18,14 @@ public class ClientInfo {
     @GeneratedValue(generator="increment")
     @GenericGenerator(name="increment", strategy = "increment")
     private Long id;
-    @Column(name = "name", unique = true)
-    private String login; // name to be logged in to server (login)
-    @Column(name = "ip_address")
-    private String ipAddress;
+    @Column(name = "login", unique = true)
+    private String login;
+    @Column(name = "name")
+    private String name;
+    @Column(name = "external_ip")
+    private String externalIp;
+    @Column(name = "local_ip")
+    private String localIp;
     @Column(name = "pc_name")
     private String pcName;
     @Column(name = "pc_model")
@@ -29,4 +33,10 @@ public class ClientInfo {
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private ClientStatus status;
+    @Column(name = "files_folder")
+    private String filesFolder;
+    @Column(name = "send_frequency")
+    private int sendFrequency; // per Hour
+    @Column(name = "work_request_frequency")
+    private int aliveRequestFrequency; // per Hour
 }

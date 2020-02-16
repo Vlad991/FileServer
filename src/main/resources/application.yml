@@ -12,9 +12,22 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
+
 server:
   port: 8087
 
 logging:
   level:
     root: INFO
+
+management:
+  endpoint:
+    shutdown:
+      enabled: true
+    info:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    enabled-by-default: true

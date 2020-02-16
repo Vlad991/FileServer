@@ -17,8 +17,6 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
         registry.addHandler(textMessageWebSocket(), "/text")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
-        registry.addHandler(loginWebSocket(), "/login")
-                .setAllowedOrigins("*");
         registry.addHandler(firstFilePartWebSocket(), "/first-file-part")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
@@ -33,11 +31,6 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
     @Bean
     public TextMessageWebSocket textMessageWebSocket(){
         return new TextMessageWebSocket();
-    }
-
-    @Bean
-    public LoginWebSocket loginWebSocket(){
-        return new LoginWebSocket();
     }
 
     @Bean

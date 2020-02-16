@@ -8,7 +8,6 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.context.annotation.PropertySource;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -81,15 +80,15 @@ public class FileSynchronizationServer {
             @Override
             public void actionPerformed(ActionEvent e) {
                 Main.stopServer();
-                Main.server.setServerStatus(ServerStatus.SERVER_STANDBY_FULL);
-                jLabelServerStatusValue.setText(ServerStatus.SERVER_STANDBY_FULL.getStatus());
+                Main.server.setServerStatus(ServerStatus.SERVER_STOP);
+                jLabelServerStatusValue.setText(ServerStatus.SERVER_STOP.getStatus());
                 jLabelServerStatusValue.setForeground(Color.RED);
             }
         });
         jButtonStartServer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Main.startServer(8087);
+                Main.startServer();
                 Main.server.setServerStatus(ServerStatus.SERVER_WORK);
                 jLabelServerStatusValue.setText(ServerStatus.SERVER_WORK.getStatus());
                 jLabelServerStatusValue.setForeground(Color.GREEN);
@@ -102,7 +101,7 @@ public class FileSynchronizationServer {
                         Main.server.getClientInfoRepository()
                                 .findByLogin(jListClientList.getSelectedValue().toString());
                 jLabelClientStatusValue.setText(clientInfo.getStatus().getStatus());
-                jLabelIPValue.setText(clientInfo.getIpAddress());
+                jLabelIPValue.setText(clientInfo.getExternalIp());
                 jLabelPCNameValue.setText(clientInfo.getPcName());
                 jLabelPCModelValue.setText(clientInfo.getPcModel());
             }

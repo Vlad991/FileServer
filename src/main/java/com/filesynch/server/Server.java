@@ -9,8 +9,6 @@ import com.filesynch.gui.NewClient;
 import com.filesynch.repository.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -54,7 +52,7 @@ public class Server {
     public final String FILE_INPUT_DIRECTORY = "input_files/";
     public final String FILE_OUTPUT_DIRECTORY = "output_files/";
     @Getter
-    private HashMap<String, WebSocketSession> loginSessionHashMap = new HashMap<>();
+    private HashMap<String, ClientInfoDTO> loginSessionHashMap = new HashMap<>();
     @Getter
     private HashMap<String, WebSocketSession> clientTextMessageSessionHashMap = new HashMap<>();
     @Getter
@@ -74,7 +72,7 @@ public class Server {
         filePartReceivedConverter = new FilePartReceivedConverter(clientInfoConverter, fileInfoReceivedConverter);
         filePartSentConverter = new FilePartSentConverter(clientInfoConverter, fileInfoSentConverter);
         textMessageConverter = new TextMessageConverter(clientInfoConverter);
-        serverStatus = ServerStatus.SERVER_STANDBY_FULL;
+        serverStatus = ServerStatus.SERVER_STOP;
         this.clientInfoRepository = clientInfoRepository;
         this.fileInfoReceivedRepository = fileInfoReceivedRepository;
         this.fileInfoSentRepository = fileInfoSentRepository;
@@ -83,37 +81,61 @@ public class Server {
         this.textMessageRepository = textMessageRepository;
     }
 
-    public String loginToServer(ClientInfoDTO clientInfoDTO, WebSocketSession clientLoginSession) {
-        Logger.log(clientInfoDTO.toString());
-        String login = null;
-        ClientInfo clientInfoTest = clientInfoRepository.findByLogin(clientInfoDTO.getLogin());
-        if (clientInfoDTO.getLogin() != null && clientInfoRepository.findByLogin(clientInfoDTO.getLogin()) != null) {
-            login = clientInfoDTO.getLogin();
-        } else {
-            NewClient newClient = new NewClient();
-            JFrame newClientFrame = Main.showNewClientIcon(clientLoginSession, newClient);
-            newClient.getJLabelIPValue().setText(clientInfoDTO.getIpAddress());
-            newClient.getJLabelPCModelValue().setText(clientInfoDTO.getPcModel());
-            newClient.getJLabelPCNameValue().setText(clientInfoDTO.getPcName());
-            synchronized (clientLoginSession) {
-                try {
-                    clientLoginSession.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            login = newClient.getJTextFieldLogin().getText();
-            clientInfoDTO.setLogin(login);
-            clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
-            Main.hideNewClientIcon(newClientFrame);
+    public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) {
+        if (clientInfoDTO.getLogin() != null && clientIsRegistered(clientInfoDTO.getLogin())) {
+            return clientInfoDTO;
         }
-        loginSessionHashMap.put(login, clientLoginSession);
+        Logger.log(clientInfoDTO.toString());
+        clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
+        String login = null;
+        NewClient newClient = new NewClient();
+        JFrame newClientFrame = Main.showNewClientIcon(clientInfoDTO, newClient);
+        synchronized (clientInfoDTO) {
+            try {
+                clientInfoDTO.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        login = newClient.getJTextFieldLogin().getText();
+        clientInfoDTO.setLogin(login);
+        clientInfoDTO.setFilesFolder(newClient.getJTextFieldFilesFolder().getText());
+        clientInfoDTO.setSendFrequency(Integer.parseInt(newClient.getJTextFieldSendFrequency().getText()));
+        clientInfoDTO.setAliveRequestFrequency(Integer.parseInt(newClient.getJTextFieldAliveRequestFrequency().getText()));
+        clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
+        clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
+        Main.hideNewClientIcon(newClientFrame);
+        loginSessionHashMap.put(login, clientInfoDTO);
         Main.updateClientList();
-        File directory = new File(FILE_INPUT_DIRECTORY + login);
+        File directory = new File(clientInfoDTO.getFilesFolder());
         if (!directory.exists()) {
             directory.mkdir();
         }
-        return login;
+        return clientInfoDTO;
+    }
+
+    public boolean loginToServer(String login) {
+        if (!clientIsRegistered(login)) {
+            return false;
+        }
+        Logger.log("Connected: " + login);
+        ClientInfo clientInfo = clientInfoRepository.findByLogin(login);
+        clientInfo.setStatus(ClientStatus.CLIENT_WORK);
+        clientInfoRepository.save(clientInfo);
+        ClientInfoDTO clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
+        loginSessionHashMap.put(login, clientInfoDTO);
+        Main.updateClientList();
+        File directory = new File(clientInfoDTO.getFilesFolder());
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
+        return true;
+    }
+
+    public void logoutFromServer(String login) {
+        setClientStatus(login, ClientStatus.CLIENT_PAUSE);
+        Logger.log("Disconnected: " + login);
+        loginSessionHashMap.remove(login);
     }
 
     public String sendTextMessageToServer(String login, String message) {
@@ -297,9 +319,7 @@ public class Server {
 
     public boolean sendAllFilesToClient(String login) {
         setServerStatus(ServerStatus.SERVER_WORK);
-        WebSocketSession loginSession = loginSessionHashMap.get(login);
-        if (loginSession == null) {
-            Logger.log("Login not correct");
+        if (!clientIsLoggedIn(login)) {
             return false;
         }
         try (Stream<Path> walk = Files.walk(Paths.get(FILE_OUTPUT_DIRECTORY
@@ -538,10 +558,31 @@ public class Server {
     }
 
     public boolean clientIsLoggedIn(String login) { // todo check in session list
-        ClientInfo client = clientInfoRepository.findByLogin(login);
+        ClientInfoDTO client = loginSessionHashMap.get(login);
         if (client == null) {
+            Logger.log("Not logged in: " + login);
             return false;
         }
         return true;
+    }
+
+    public boolean clientIsRegistered(String login) {
+        ClientInfo client = clientInfoRepository.findByLogin(login);
+        if (client == null) {
+            Logger.log("Not registered: " + login);
+            return false;
+        }
+        return true;
+    }
+
+    public ClientInfoDTO setClientStatus(String login, ClientStatus clientStatus) {
+        ClientInfo clientInfo = clientInfoRepository.findByLogin(login);
+        clientInfo.setStatus(clientStatus);
+        ClientInfoDTO clientInfoDTO = loginSessionHashMap.get(login);
+        if (clientInfoDTO != null) {
+            clientInfoDTO.setStatus(clientStatus);
+        }
+        clientInfoRepository.save(clientInfo);
+        return clientInfoDTO;
     }
 }
