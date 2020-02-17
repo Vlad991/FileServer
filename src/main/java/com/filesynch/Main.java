@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
@@ -119,11 +120,20 @@ public class Main extends SpringBootServletInitializer {
 
     public static void updateClientList() {
         HashMap<String, ClientInfoDTO> loginSessionHashMap = server.getLoginSessionHashMap();
-        DefaultListModel demoList = new DefaultListModel();
-        loginSessionHashMap.forEach((login, session) -> {
-            demoList.addElement(login);
+        DefaultTableModel model = (DefaultTableModel) fileSynchronizationServer.getJTableClients().getModel();
+        loginSessionHashMap.forEach((login, clientInfoDTO) -> {
+            model.addRow(new Object[]{
+                    clientInfoDTO.getLogin(),
+                    clientInfoDTO.getName(),
+                    clientInfoDTO.getExternalIp(),
+                    clientInfoDTO.getLocalIp(),
+                    clientInfoDTO.getPcName(),
+                    clientInfoDTO.getPcModel(),
+                    clientInfoDTO.getStatus(),
+                    clientInfoDTO.getFilesFolder(),
+                    clientInfoDTO.getSendFrequency(),
+                    clientInfoDTO.getAliveRequestFrequency()});
         });
-        fileSynchronizationServer.getJListClientList().setModel(demoList);
     }
 
     public static void updateFileQueue() {

@@ -86,6 +86,7 @@ public class Server {
             return clientInfoDTO;
         }
         Logger.log(clientInfoDTO.toString());
+        clientInfoDTO.setStatus(ClientStatus.NEW);
         clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
         String login = null;
         NewClient newClient = new NewClient();

@@ -10,8 +10,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import javax.swing.event.AncestorListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -20,8 +24,6 @@ public class FileSynchronizationServer {
     @Getter
     private JPanel jPanelServer;
     private JTabbedPane tabbedPane1;
-    private JTable table2;
-    private JTable table3;
     private JPanel jPanelMain;
     private JPanel jPanelTextMessage;
     private JPanel jPanelLog;
@@ -45,15 +47,6 @@ public class FileSynchronizationServer {
     private JButton jButtonStopServer;
     @Getter
     private JList jListQueueSending;
-    @Getter
-    @Setter
-    private JList jListClientList;
-    private JPanel jPanelClientInfo;
-    private JLabel jLabelClientStatus;
-    private JLabel jLabelClientInfo;
-    private JLabel jLabelPCModel;
-    private JLabel jLabelIP;
-    private JLabel jLabelPCName;
     private JLabel jLabelClientStatusValue;
     private JLabel jLabelIPValue;
     private JLabel jLabelPCNameValue;
@@ -67,15 +60,35 @@ public class FileSynchronizationServer {
     private JLabel jLabelLog;
     private JScrollPane jScrollPaneLog;
     private JScrollPane jScrollPaneQueueSending;
-    private JScrollPane jScrollPaneClientList;
     private JButton jButtonSendAllFiles;
     private JScrollPane jScrollPaneQueueReceiving;
     @Getter
     private JList jListQueueReceiving;
+    private JPanel jPanelClients;
+    private JPanel jPanelQueues;
+    private JRadioButton ALLRadioButton;
+    private JRadioButton NEWRadioButton;
+    private JRadioButton CLIENT_FIRSTRadioButton;
+    private JRadioButton CLIENT_WORKRadioButton;
+    private JRadioButton CLIENT_PAUSERadioButton;
+    @Getter
+    private JTable jTableClients;
+    private JScrollPane JScrollPaneClientsTable;
+    private JPanel JPanelClientsTable;
+    private JRadioButton CLIENT_ARCHIVERadioButton;
+    private JPanel jPanelClientsLog;
+    private JLabel jLabelClientsLog;
+    private JTextArea jTextAreaClientsLog;
+    private JList list1;
+    private JList list2;
+    private JList list3;
+    private JList list4;
+    private JButton updateQueuesButton;
     private JButton jButtonSendAllFilesFast;
     private JButton jButtonSendFileFast;
 
     public FileSynchronizationServer() {
+        $$$setupUI$$$();
         jButtonStopServer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -94,23 +107,11 @@ public class FileSynchronizationServer {
                 jLabelServerStatusValue.setForeground(Color.GREEN);
             }
         });
-        jListClientList.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                ClientInfo clientInfo =
-                        Main.server.getClientInfoRepository()
-                                .findByLogin(jListClientList.getSelectedValue().toString());
-                jLabelClientStatusValue.setText(clientInfo.getStatus().getStatus());
-                jLabelIPValue.setText(clientInfo.getExternalIp());
-                jLabelPCNameValue.setText(clientInfo.getPcName());
-                jLabelPCModelValue.setText(clientInfo.getPcModel());
-            }
-        });
         jButtonTextMessage.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new Thread(() -> {
-                    Main.sendMessage(jListClientList.getSelectedValue().toString(), jTextFieldTextMessage.getText());
+                    Main.sendMessage(jTableClients.getValueAt(jTableClients.getSelectedRow(), 0).toString(), jTextFieldTextMessage.getText());
                 }).start();
             }
         });
@@ -118,7 +119,7 @@ public class FileSynchronizationServer {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new Thread(() -> {
-                    Main.sendFile(jListClientList.getSelectedValue().toString(), jTextFieldFile.getText());
+                    Main.sendFile(jTableClients.getValueAt(jTableClients.getSelectedRow(), 0).toString(), jTextFieldFile.getText());
                 }).start();
             }
         });
@@ -126,7 +127,7 @@ public class FileSynchronizationServer {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new Thread(() -> {
-                    Main.sendAllFiles(jListClientList.getSelectedValue().toString());
+                    Main.sendAllFiles(jTableClients.getValueAt(jTableClients.getSelectedRow(), 0).toString());
                 }).start();
             }
         });
@@ -140,13 +141,6 @@ public class FileSynchronizationServer {
         frame.setVisible(true);
     }
 
-    {
-// GUI initializer generated by IntelliJ IDEA GUI Designer
-// >>> IMPORTANT!! <<<
-// DO NOT EDIT OR ADD ANY CODE HERE!
-        $$$setupUI$$$();
-    }
-
     /**
      * Method generated by IntelliJ IDEA GUI Designer
      * >>> IMPORTANT!! <<<
@@ -155,29 +149,85 @@ public class FileSynchronizationServer {
      * @noinspection ALL
      */
     private void $$$setupUI$$$() {
+        createUIComponents();
         jPanelServer = new JPanel();
         jPanelServer.setLayout(new GridLayoutManager(1, 1, new Insets(10, 20, 10, 20), -1, -1));
-        jPanelServer.setPreferredSize(new Dimension(950, 800));
+        jPanelServer.setPreferredSize(new Dimension(1200, 800));
         tabbedPane1 = new JTabbedPane();
         jPanelServer.add(tabbedPane1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 200), null, 0, false));
         jPanelMain = new JPanel();
-        jPanelMain.setLayout(new GridLayoutManager(7, 5, new Insets(0, 0, 0, 0), -1, -1));
-        tabbedPane1.addTab("Main", jPanelMain);
+        jPanelMain.setLayout(new GridLayoutManager(4, 7, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("Server", jPanelMain);
+        jPanelServerInfo = new JPanel();
+        jPanelServerInfo.setLayout(new GridLayoutManager(2, 12, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelMain.add(jPanelServerInfo, new GridConstraints(0, 1, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jPanelServerInfo.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-12199626)), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, this.$$$getFont$$$(null, -1, -1, jPanelServerInfo.getFont())));
+        jLabelServerStatus = new JLabel();
+        Font jLabelServerStatusFont = this.$$$getFont$$$(null, -1, -1, jLabelServerStatus.getFont());
+        if (jLabelServerStatusFont != null) jLabelServerStatus.setFont(jLabelServerStatusFont);
+        jLabelServerStatus.setText("Server Status:");
+        jPanelServerInfo.add(jLabelServerStatus, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jLabelServerStatusValue = new JLabel();
+        Font jLabelServerStatusValueFont = this.$$$getFont$$$(null, -1, -1, jLabelServerStatusValue.getFont());
+        if (jLabelServerStatusValueFont != null) jLabelServerStatusValue.setFont(jLabelServerStatusValueFont);
+        jLabelServerStatusValue.setForeground(new Color(-2537940));
+        jLabelServerStatusValue.setText("SERVER_STOP");
+        jPanelServerInfo.add(jLabelServerStatusValue, new GridConstraints(0, 6, 1, 6, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jLabelServerInfoValue = new JLabel();
+        Font jLabelServerInfoValueFont = this.$$$getFont$$$(null, -1, -1, jLabelServerInfoValue.getFont());
+        if (jLabelServerInfoValueFont != null) jLabelServerInfoValue.setFont(jLabelServerInfoValueFont);
+        jLabelServerInfoValue.setText("");
+        jPanelServerInfo.add(jLabelServerInfoValue, new GridConstraints(0, 1, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jButtonStartServer = new JButton();
+        Font jButtonStartServerFont = this.$$$getFont$$$(null, -1, -1, jButtonStartServer.getFont());
+        if (jButtonStartServerFont != null) jButtonStartServer.setFont(jButtonStartServerFont);
+        jButtonStartServer.setText("Start Server");
+        jPanelServerInfo.add(jButtonStartServer, new GridConstraints(1, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jButtonStopServer = new JButton();
+        Font jButtonStopServerFont = this.$$$getFont$$$(null, -1, -1, jButtonStopServer.getFont());
+        if (jButtonStopServerFont != null) jButtonStopServer.setFont(jButtonStopServerFont);
+        jButtonStopServer.setText("Stop Server");
+        jPanelServerInfo.add(jButtonStopServer, new GridConstraints(1, 5, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jLabelServerInfo = new JLabel();
+        jLabelServerInfo.setFocusTraversalPolicyProvider(false);
+        Font jLabelServerInfoFont = this.$$$getFont$$$(null, -1, -1, jLabelServerInfo.getFont());
+        if (jLabelServerInfoFont != null) jLabelServerInfo.setFont(jLabelServerInfoFont);
+        jLabelServerInfo.setText("Server Info:");
+        jPanelServerInfo.add(jLabelServerInfo, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelLog = new JPanel();
+        jPanelLog.setLayout(new GridLayoutManager(2, 1, new Insets(5, 5, 5, 5), -1, -1));
+        jPanelLog.setDoubleBuffered(true);
+        jPanelMain.add(jPanelLog, new GridConstraints(1, 1, 3, 6, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(100, 200), null, 0, false));
+        jPanelLog.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-13224394)), null));
+        jLabelLog = new JLabel();
+        jLabelLog.setText("Log:");
+        jPanelLog.add(jLabelLog, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jScrollPaneLog = new JScrollPane();
+        jPanelLog.add(jScrollPaneLog, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jTextAreaLog = new JTextArea();
+        jScrollPaneLog.setViewportView(jTextAreaLog);
+        final Spacer spacer1 = new Spacer();
+        jPanelMain.add(spacer1, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer2 = new Spacer();
+        jPanelMain.add(spacer2, new GridConstraints(1, 0, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jPanelClients = new JPanel();
+        jPanelClients.setLayout(new GridLayoutManager(7, 8, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("Clients", jPanelClients);
         jPanelTextMessage = new JPanel();
         jPanelTextMessage.setLayout(new GridLayoutManager(2, 2, new Insets(5, 5, 5, 5), -1, -1));
-        jPanelMain.add(jPanelTextMessage, new GridConstraints(3, 2, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(-1, 30), null, 0, false));
+        jPanelClients.add(jPanelTextMessage, new GridConstraints(2, 0, 3, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(-1, 30), null, 0, false));
         jPanelTextMessage.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-10385191)), null));
-        jLabelTextMessage = new JLabel();
-        jLabelTextMessage.setText("Text Message:");
-        jPanelTextMessage.add(jLabelTextMessage, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jTextFieldTextMessage = new JTextField();
         jPanelTextMessage.add(jTextFieldTextMessage, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jButtonTextMessage = new JButton();
         jButtonTextMessage.setText("Send Message");
         jPanelTextMessage.add(jButtonTextMessage, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jLabelTextMessage = new JLabel();
+        jLabelTextMessage.setText("Text Message:");
+        jPanelTextMessage.add(jLabelTextMessage, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jPanelFile = new JPanel();
         jPanelFile.setLayout(new GridLayoutManager(4, 6, new Insets(5, 5, 5, 5), -1, -1));
-        jPanelMain.add(jPanelFile, new GridConstraints(4, 2, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jPanelClients.add(jPanelFile, new GridConstraints(5, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jPanelFile.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-7939681)), null));
         jLabelFileTitle = new JLabel();
         jLabelFileTitle.setText("File:");
@@ -197,7 +247,7 @@ public class FileSynchronizationServer {
         jPanelFile.add(jButtonSendFile, new GridConstraints(1, 2, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jPanelCommand = new JPanel();
         jPanelCommand.setLayout(new GridLayoutManager(2, 2, new Insets(5, 5, 5, 5), -1, -1));
-        jPanelMain.add(jPanelCommand, new GridConstraints(5, 2, 2, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jPanelClients.add(jPanelCommand, new GridConstraints(6, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jPanelCommand.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-2525260)), null));
         jLabelCommand = new JLabel();
         jLabelCommand.setText("Command:");
@@ -207,106 +257,126 @@ public class FileSynchronizationServer {
         jButtonSendCommand = new JButton();
         jButtonSendCommand.setText("Send Command");
         jPanelCommand.add(jButtonSendCommand, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jPanelClientInfo = new JPanel();
-        jPanelClientInfo.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jPanelMain.add(jPanelClientInfo, new GridConstraints(2, 2, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jLabelClientStatus = new JLabel();
-        jLabelClientStatus.setText("Client Status:");
-        jPanelClientInfo.add(jLabelClientStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelClientInfo = new JLabel();
-        jLabelClientInfo.setText("Client Info:");
-        jPanelClientInfo.add(jLabelClientInfo, new GridConstraints(1, 0, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelIP = new JLabel();
-        jLabelIP.setText("IP Address:");
-        jPanelClientInfo.add(jLabelIP, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelPCName = new JLabel();
-        jLabelPCName.setText("PC Name:");
-        jPanelClientInfo.add(jLabelPCName, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelClientStatusValue = new JLabel();
-        jLabelClientStatusValue.setText("");
-        jPanelClientInfo.add(jLabelClientStatusValue, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelIPValue = new JLabel();
-        jLabelIPValue.setText("");
-        jPanelClientInfo.add(jLabelIPValue, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelPCNameValue = new JLabel();
-        jLabelPCNameValue.setText("");
-        jPanelClientInfo.add(jLabelPCNameValue, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelPCModel = new JLabel();
-        jLabelPCModel.setText("PC Model:");
-        jPanelClientInfo.add(jLabelPCModel, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelPCModelValue = new JLabel();
-        jLabelPCModelValue.setText("");
-        jPanelClientInfo.add(jLabelPCModelValue, new GridConstraints(4, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jPanelServerInfo = new JPanel();
-        jPanelServerInfo.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jPanelMain.add(jPanelServerInfo, new GridConstraints(0, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jLabelServerInfo = new JLabel();
-        jLabelServerInfo.setText("Server Info:");
-        jPanelServerInfo.add(jLabelServerInfo, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelServerStatus = new JLabel();
-        jLabelServerStatus.setText("Server Status:");
-        jPanelServerInfo.add(jLabelServerStatus, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jButtonStopServer = new JButton();
-        jButtonStopServer.setText("Stop Server");
-        jPanelServerInfo.add(jButtonStopServer, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelServerInfoValue = new JLabel();
-        jLabelServerInfoValue.setText("127.0.0.1:1099/fs");
-        jPanelServerInfo.add(jLabelServerInfoValue, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jLabelServerStatusValue = new JLabel();
-        jLabelServerStatusValue.setForeground(new Color(-2537940));
-        jLabelServerStatusValue.setText("SERVER_STANDBY_FULL");
-        jPanelServerInfo.add(jLabelServerStatusValue, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jButtonStartServer = new JButton();
-        jButtonStartServer.setText("Start Server");
-        jPanelServerInfo.add(jButtonStartServer, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jPanelLog = new JPanel();
-        jPanelLog.setLayout(new GridLayoutManager(2, 1, new Insets(5, 5, 5, 5), -1, -1));
-        jPanelLog.setDoubleBuffered(true);
-        jPanelMain.add(jPanelLog, new GridConstraints(1, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(100, 200), null, 0, false));
-        jPanelLog.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-13224394)), null));
-        jLabelLog = new JLabel();
-        jLabelLog.setText("Log:");
-        jPanelLog.add(jLabelLog, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jScrollPaneLog = new JScrollPane();
-        jPanelLog.add(jScrollPaneLog, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        jTextAreaLog = new JTextArea();
-        jScrollPaneLog.setViewportView(jTextAreaLog);
-        jScrollPaneQueueSending = new JScrollPane();
-        jPanelMain.add(jScrollPaneQueueSending, new GridConstraints(4, 0, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        jListQueueSending = new JList();
-        final DefaultListModel defaultListModel1 = new DefaultListModel();
-        jListQueueSending.setModel(defaultListModel1);
-        jScrollPaneQueueSending.setViewportView(jListQueueSending);
-        jScrollPaneClientList = new JScrollPane();
-        jPanelMain.add(jScrollPaneClientList, new GridConstraints(2, 0, 2, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        jListClientList = new JList();
-        final DefaultListModel defaultListModel2 = new DefaultListModel();
-        jListClientList.setModel(defaultListModel2);
-        jScrollPaneClientList.setViewportView(jListClientList);
+        JPanelClientsTable = new JPanel();
+        JPanelClientsTable.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelClients.add(JPanelClientsTable, new GridConstraints(1, 0, 1, 8, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        JScrollPaneClientsTable = new JScrollPane();
+        JPanelClientsTable.add(JScrollPaneClientsTable, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        JScrollPaneClientsTable.setBorder(BorderFactory.createTitledBorder("Clients"));
+        jTableClients.putClientProperty("Table.isFileList", Boolean.FALSE);
+        JScrollPaneClientsTable.setViewportView(jTableClients);
+        ALLRadioButton = new JRadioButton();
+        ALLRadioButton.setText("ALL");
+        jPanelClients.add(ALLRadioButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        NEWRadioButton = new JRadioButton();
+        NEWRadioButton.setText("NEW");
+        jPanelClients.add(NEWRadioButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CLIENT_FIRSTRadioButton = new JRadioButton();
+        CLIENT_FIRSTRadioButton.setText("CLIENT_FIRST");
+        jPanelClients.add(CLIENT_FIRSTRadioButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CLIENT_WORKRadioButton = new JRadioButton();
+        CLIENT_WORKRadioButton.setText("CLIENT_WORK");
+        jPanelClients.add(CLIENT_WORKRadioButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CLIENT_PAUSERadioButton = new JRadioButton();
+        CLIENT_PAUSERadioButton.setText("CLIENT_PAUSE");
+        jPanelClients.add(CLIENT_PAUSERadioButton, new GridConstraints(0, 4, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CLIENT_ARCHIVERadioButton = new JRadioButton();
+        CLIENT_ARCHIVERadioButton.setText("CLIENT_ACHIVE");
+        jPanelClients.add(CLIENT_ARCHIVERadioButton, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelClientsLog = new JPanel();
+        jPanelClientsLog.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelClients.add(jPanelClientsLog, new GridConstraints(2, 5, 5, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jLabelClientsLog = new JLabel();
+        jLabelClientsLog.setText("Log:");
+        jPanelClientsLog.add(jLabelClientsLog, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane1 = new JScrollPane();
+        jPanelClientsLog.add(scrollPane1, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jTextAreaClientsLog = new JTextArea();
+        scrollPane1.setViewportView(jTextAreaClientsLog);
+        jPanelQueues = new JPanel();
+        jPanelQueues.setLayout(new GridLayoutManager(4, 7, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("Queues", jPanelQueues);
         jScrollPaneQueueReceiving = new JScrollPane();
-        jPanelMain.add(jScrollPaneQueueReceiving, new GridConstraints(4, 1, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jPanelQueues.add(jScrollPaneQueueReceiving, new GridConstraints(1, 0, 2, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         jListQueueReceiving = new JList();
-        final DefaultListModel defaultListModel3 = new DefaultListModel();
-        jListQueueReceiving.setModel(defaultListModel3);
+        final DefaultListModel defaultListModel1 = new DefaultListModel();
+        jListQueueReceiving.setModel(defaultListModel1);
         jScrollPaneQueueReceiving.setViewportView(jListQueueReceiving);
+        jScrollPaneQueueSending = new JScrollPane();
+        jPanelQueues.add(jScrollPaneQueueSending, new GridConstraints(1, 2, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jListQueueSending = new JList();
+        final DefaultListModel defaultListModel2 = new DefaultListModel();
+        jListQueueSending.setModel(defaultListModel2);
+        jScrollPaneQueueSending.setViewportView(jListQueueSending);
+        final JLabel label1 = new JLabel();
+        label1.setText("NEW");
+        jPanelQueues.add(label1, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("TECHNICAL");
+        jPanelQueues.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane2 = new JScrollPane();
+        jPanelQueues.add(scrollPane2, new GridConstraints(1, 4, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        list1 = new JList();
+        scrollPane2.setViewportView(list1);
+        final JScrollPane scrollPane3 = new JScrollPane();
+        jPanelQueues.add(scrollPane3, new GridConstraints(1, 5, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        list2 = new JList();
+        scrollPane3.setViewportView(list2);
+        final JScrollPane scrollPane4 = new JScrollPane();
+        jPanelQueues.add(scrollPane4, new GridConstraints(1, 6, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        list3 = new JList();
+        scrollPane4.setViewportView(list3);
+        final JLabel label3 = new JLabel();
+        label3.setText("FILE_PARTS");
+        jPanelQueues.add(label3, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane5 = new JScrollPane();
+        jPanelQueues.add(scrollPane5, new GridConstraints(1, 3, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        list4 = new JList();
+        scrollPane5.setViewportView(list4);
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        tabbedPane1.addTab("Edit", panel1);
-        table2 = new JTable();
-        panel1.add(table2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
-        final Spacer spacer1 = new Spacer();
-        panel1.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer2 = new Spacer();
-        panel1.add(spacer2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
-        tabbedPane1.addTab("Info", panel2);
-        table3 = new JTable();
-        panel2.add(table3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
+        panel1.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelQueues.add(panel1, new GridConstraints(3, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        updateQueuesButton = new JButton();
+        updateQueuesButton.setText("Update Queues");
+        panel1.add(updateQueuesButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
-        panel2.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer4 = new Spacer();
-        panel2.add(spacer4, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        panel1.add(spacer3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JLabel label4 = new JLabel();
+        label4.setText("ALIVE");
+        jPanelQueues.add(label4, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label5 = new JLabel();
+        label5.setText("FILE_INFO");
+        jPanelQueues.add(label5, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label6 = new JLabel();
+        label6.setText("FILES");
+        jPanelQueues.add(label6, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ButtonGroup buttonGroup;
+        buttonGroup = new ButtonGroup();
+        buttonGroup.add(NEWRadioButton);
+        buttonGroup.add(ALLRadioButton);
+        buttonGroup.add(CLIENT_FIRSTRadioButton);
+        buttonGroup.add(CLIENT_WORKRadioButton);
+        buttonGroup.add(CLIENT_PAUSERadioButton);
+        buttonGroup.add(CLIENT_ARCHIVERadioButton);
+    }
+
+    /**
+     * @noinspection ALL
+     */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont) {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null) {
+            resultName = currentFont.getName();
+        } else {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1')) {
+                resultName = fontName;
+            } else {
+                resultName = currentFont.getName();
+            }
+        }
+        return new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
     }
 
     /**
@@ -316,4 +386,33 @@ public class FileSynchronizationServer {
         return jPanelServer;
     }
 
+    private void createUIComponents() {
+        Object[] columns = {
+                "Login",
+                "Name",
+                "External IP",
+                "Local IP",
+                "PC Name",
+                "PC Model",
+                "Status",
+                "Files Folder",
+                "Send Frequency",
+                "Alive Request Frequency"};
+        String[][] data = {{"admin", "vlados", "127.0.0.1", "127.0.0.1", "MacBook Ait Vladislav", "Model OS X", "NEW"
+                , "/input_files", "10", "100"}};
+        TableModel tableModel = new DefaultTableModel(columns, 10000);
+        jTableClients = new JTable(tableModel);
+        //jTableClients.setPreferredScrollableViewportSize(new Dimension(450, 63));
+        jTableClients.setFillsViewportHeight(true);
+        jTableClients.setShowHorizontalLines(true);
+        jTableClients.setShowVerticalLines(true);
+
+        jTableClients.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent event) {
+                ClientInfo clientInfo =
+                        Main.server.getClientInfoRepository()
+                                .findByLogin(jTableClients.getValueAt(jTableClients.getSelectedRow(), 0).toString());
+            }
+        });
+    }
 }
