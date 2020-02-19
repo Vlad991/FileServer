@@ -80,7 +80,7 @@ public class NewClient {
     private void $$$setupUI$$$() {
         jPanelMain = new JPanel();
         jPanelMain.setLayout(new GridLayoutManager(11, 2, new Insets(20, 20, 20, 20), -1, -1));
-        jPanelMain.setPreferredSize(new Dimension(600, 200));
+        jPanelMain.setPreferredSize(new Dimension(600, 350));
         jLabelExternalIP = new JLabel();
         jLabelExternalIP.setText("External IP:");
         jPanelMain.add(jLabelExternalIP, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));

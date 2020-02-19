@@ -12,13 +12,15 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 
-//@Component
 public class FileInfoWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
     private Server server = Main.server;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        server = Main.server;
+        String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+        server.getClientTextMessageSessionHashMap().put(login, session);
     }
 
     @Override
@@ -30,9 +32,7 @@ public class FileInfoWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FileInfoDTO fileInfoDTO = mapper.readValue(jsonString, FileInfoDTO.class);
-            boolean result = server.sendFileInfoToServer(login, fileInfoDTO);
-            TextMessage textMessage = new TextMessage(String.valueOf(result));
-            server.getClientTextMessageSessionHashMap().get(login).sendMessage(textMessage);
+            server.sendFileInfoToServer(login, fileInfoDTO);
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }

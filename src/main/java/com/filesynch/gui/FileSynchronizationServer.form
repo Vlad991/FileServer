@@ -345,18 +345,10 @@
               </component>
               <component id="f3cd2" class="javax.swing.JRadioButton" binding="CLIENT_PAUSERadioButton">
                 <constraints>
-                  <grid row="0" column="4" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                 </constraints>
                 <properties>
                   <text value="CLIENT_PAUSE"/>
-                </properties>
-              </component>
-              <component id="e0896" class="javax.swing.JRadioButton" binding="CLIENT_ARCHIVERadioButton">
-                <constraints>
-                  <grid row="0" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <text value="CLIENT_ACHIVE"/>
                 </properties>
               </component>
               <grid id="3bd2d" binding="jPanelClientsLog" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -390,6 +382,22 @@
                   </scrollpane>
                 </children>
               </grid>
+              <component id="e0896" class="javax.swing.JRadioButton" binding="CLIENT_ARCHIVERadioButton">
+                <constraints>
+                  <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="CLIENT_ACHIVE"/>
+                </properties>
+              </component>
+              <component id="4c180" class="javax.swing.JButton" binding="updateListButton" default-binding="true">
+                <constraints>
+                  <grid row="0" column="6" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Update List"/>
+                </properties>
+              </component>
             </children>
           </grid>
           <grid id="63629" binding="jPanelQueues" layout-manager="GridLayoutManager" row-count="4" column-count="7" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">

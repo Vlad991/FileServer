@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.event.WindowAdapter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
@@ -47,7 +48,20 @@ public class Main extends SpringBootServletInitializer {
         serverFrame = new JFrame("File Synchronization Server");
         fileSynchronizationServer = new FileSynchronizationServer();
         serverFrame.setContentPane(fileSynchronizationServer.getJPanelServer());
-        serverFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        serverFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        serverFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                if (JOptionPane.showConfirmDialog(serverFrame,
+                        "Are you sure you want to close this window?", "Close Window?",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+                    // todo send textmessages to all clients
+                    stopServer();
+                    System.exit(0);
+                }
+            }
+        });
         serverFrame.pack();
         serverFrame.setLocationRelativeTo(null);
         serverFrame.setVisible(true);
@@ -59,13 +73,13 @@ public class Main extends SpringBootServletInitializer {
             try {
                 ctx = SpringApplication.run(Main.class, stringArgs);
                 server = ctx.getBean(Server.class);
+                environment = ctx.getBean(Environment.class);
+                port = environment.getProperty("server.port");
 
                 Logger.logArea = fileSynchronizationServer.getJTextAreaLog();
                 fileSynchronizationServer.getJLabelServerInfoValue().setText(InetAddress.getLocalHost().getHostAddress() + ":" + port);
                 server.setFileProgressBar(fileSynchronizationServer.getJProgressBarFile());
                 Logger.log("File Server Started");
-                environment = ctx.getBean(Environment.class);
-                port = environment.getProperty("server.port");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -75,7 +89,7 @@ public class Main extends SpringBootServletInitializer {
     }
 
     public static void stopServer() {
-        if (server.getServerStatus() == ServerStatus.SERVER_WORK) {
+        if (server != null && server.getServerStatus() == ServerStatus.SERVER_WORK) {
             try {
                 String uri = "http://localhost:" + port + "/actuator/shutdown";
                 HttpHeaders headers = new HttpHeaders();

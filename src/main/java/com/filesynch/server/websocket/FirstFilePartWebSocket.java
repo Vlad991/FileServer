@@ -20,6 +20,9 @@ public class FirstFilePartWebSocket extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        server = Main.server;
+        String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+        server.getClientTextMessageSessionHashMap().put(login, session);
     }
 
     @Override

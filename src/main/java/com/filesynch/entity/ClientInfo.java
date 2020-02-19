@@ -4,6 +4,7 @@ import com.filesynch.dto.ClientStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -11,6 +12,7 @@ import javax.persistence.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 @Entity
 @Table(name = "client_list")
 public class ClientInfo {
@@ -39,4 +41,5 @@ public class ClientInfo {
     private int sendFrequency; // per Hour
     @Column(name = "work_request_frequency")
     private int aliveRequestFrequency; // per Hour
+
 }

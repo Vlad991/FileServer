@@ -24,8 +24,6 @@ public class ClientSecurityInterceptor implements HandshakeInterceptor {
         final HttpServletRequest httpServletRequest = servletRequest.getServletRequest();
 
         String login = httpServletRequest.getHeader(Server.CLIENT_LOGIN);
-        String token = httpServletRequest.getParameter(Server.CLIENT_LOGIN);
-
         if (login != null) {
             attributes.put(Server.CLIENT_LOGIN, login);
         }

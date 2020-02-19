@@ -12,13 +12,15 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 
-//@Component
 public class FilePartWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
     private Server server = Main.server;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        server = Main.server;
+        String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+        server.getClientTextMessageSessionHashMap().put(login, session);
     }
 
     @Override
@@ -30,17 +32,6 @@ public class FilePartWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            if (filePartDTO.getOrder() == 0) {
-                return;
-            }
-            if (filePartDTO.getOrder() == 1 && filePartDTO.getHashKey() == null) {
-                WebSocketSession clientFirstFilePartSession = server.getClientFirstFilePartSessionHashMap().get(login);
-                synchronized (clientFirstFilePartSession) {
-                    clientFirstFilePartSession.getAttributes().put("first_file_part", filePartDTO);
-                    clientFirstFilePartSession.notify();
-                }
-                return;
-            }
             boolean result = server.sendFilePartToServer(login, filePartDTO);
             TextMessage textMessage = new TextMessage(mapper.writeValueAsString(result));
             server.getClientTextMessageSessionHashMap().get(login).sendMessage(textMessage);

@@ -1,24 +1,22 @@
 package com.filesynch.gui;
 
 import com.filesynch.Main;
+import com.filesynch.dto.ClientStatus;
 import com.filesynch.dto.ServerStatus;
 import com.filesynch.entity.ClientInfo;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
-import lombok.Setter;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.AncestorListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 public class FileSynchronizationServer {
     @Getter
@@ -84,8 +82,10 @@ public class FileSynchronizationServer {
     private JList list3;
     private JList list4;
     private JButton updateQueuesButton;
+    private JButton updateListButton;
     private JButton jButtonSendAllFilesFast;
     private JButton jButtonSendFileFast;
+    private Object[] columns;
 
     public FileSynchronizationServer() {
         $$$setupUI$$$();
@@ -131,6 +131,149 @@ public class FileSynchronizationServer {
                 }).start();
             }
         });
+        ALLRadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        tableModel.addRow(new Object[]{
+                                clientInfo.getLogin(),
+                                clientInfo.getName(),
+                                clientInfo.getExternalIp(),
+                                clientInfo.getLocalIp(),
+                                clientInfo.getPcName(),
+                                clientInfo.getPcModel(),
+                                clientInfo.getStatus(),
+                                clientInfo.getFilesFolder(),
+                                clientInfo.getSendFrequency(),
+                                clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
+        NEWRadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        if (clientInfo.getStatus() == ClientStatus.NEW)
+                            tableModel.addRow(new Object[]{
+                                    clientInfo.getLogin(),
+                                    clientInfo.getName(),
+                                    clientInfo.getExternalIp(),
+                                    clientInfo.getLocalIp(),
+                                    clientInfo.getPcName(),
+                                    clientInfo.getPcModel(),
+                                    clientInfo.getStatus(),
+                                    clientInfo.getFilesFolder(),
+                                    clientInfo.getSendFrequency(),
+                                    clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
+        CLIENT_FIRSTRadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        if (clientInfo.getStatus() == ClientStatus.CLIENT_FIRST)
+                            tableModel.addRow(new Object[]{
+                                    clientInfo.getLogin(),
+                                    clientInfo.getName(),
+                                    clientInfo.getExternalIp(),
+                                    clientInfo.getLocalIp(),
+                                    clientInfo.getPcName(),
+                                    clientInfo.getPcModel(),
+                                    clientInfo.getStatus(),
+                                    clientInfo.getFilesFolder(),
+                                    clientInfo.getSendFrequency(),
+                                    clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
+        CLIENT_WORKRadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        if (clientInfo.getStatus() == ClientStatus.CLIENT_WORK)
+                            tableModel.addRow(new Object[]{
+                                    clientInfo.getLogin(),
+                                    clientInfo.getName(),
+                                    clientInfo.getExternalIp(),
+                                    clientInfo.getLocalIp(),
+                                    clientInfo.getPcName(),
+                                    clientInfo.getPcModel(),
+                                    clientInfo.getStatus(),
+                                    clientInfo.getFilesFolder(),
+                                    clientInfo.getSendFrequency(),
+                                    clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
+        CLIENT_PAUSERadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        if (clientInfo.getStatus() == ClientStatus.CLIENT_PAUSE)
+                            tableModel.addRow(new Object[]{
+                                    clientInfo.getLogin(),
+                                    clientInfo.getName(),
+                                    clientInfo.getExternalIp(),
+                                    clientInfo.getLocalIp(),
+                                    clientInfo.getPcName(),
+                                    clientInfo.getPcModel(),
+                                    clientInfo.getStatus(),
+                                    clientInfo.getFilesFolder(),
+                                    clientInfo.getSendFrequency(),
+                                    clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
+        CLIENT_ARCHIVERadioButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new Thread(() -> {
+                    List<ClientInfo> clientsList = Main.server.getClientInfoDTOList();
+                    DefaultTableModel tableModel = (DefaultTableModel) jTableClients.getModel();
+                    tableModel.setRowCount(0);
+                    clientsList.forEach((clientInfo) -> {
+                        if (clientInfo.getStatus() == ClientStatus.CLIENT_ARCHIVE)
+                            tableModel.addRow(new Object[]{
+                                    clientInfo.getLogin(),
+                                    clientInfo.getName(),
+                                    clientInfo.getExternalIp(),
+                                    clientInfo.getLocalIp(),
+                                    clientInfo.getPcName(),
+                                    clientInfo.getPcModel(),
+                                    clientInfo.getStatus(),
+                                    clientInfo.getFilesFolder(),
+                                    clientInfo.getSendFrequency(),
+                                    clientInfo.getAliveRequestFrequency()});
+                    });
+                }).start();
+            }
+        });
     }
 
     public static void main(String[] args) {
@@ -161,7 +304,7 @@ public class FileSynchronizationServer {
         jPanelServerInfo = new JPanel();
         jPanelServerInfo.setLayout(new GridLayoutManager(2, 12, new Insets(0, 0, 0, 0), -1, -1));
         jPanelMain.add(jPanelServerInfo, new GridConstraints(0, 1, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jPanelServerInfo.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-12199626)), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, this.$$$getFont$$$(null, -1, -1, jPanelServerInfo.getFont())));
+        jPanelServerInfo.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(-11911975)), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, this.$$$getFont$$$(null, -1, -1, jPanelServerInfo.getFont())));
         jLabelServerStatus = new JLabel();
         Font jLabelServerStatusFont = this.$$$getFont$$$(null, -1, -1, jLabelServerStatus.getFont());
         if (jLabelServerStatusFont != null) jLabelServerStatus.setFont(jLabelServerStatusFont);
@@ -279,10 +422,7 @@ public class FileSynchronizationServer {
         jPanelClients.add(CLIENT_WORKRadioButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         CLIENT_PAUSERadioButton = new JRadioButton();
         CLIENT_PAUSERadioButton.setText("CLIENT_PAUSE");
-        jPanelClients.add(CLIENT_PAUSERadioButton, new GridConstraints(0, 4, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        CLIENT_ARCHIVERadioButton = new JRadioButton();
-        CLIENT_ARCHIVERadioButton.setText("CLIENT_ACHIVE");
-        jPanelClients.add(CLIENT_ARCHIVERadioButton, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelClients.add(CLIENT_PAUSERadioButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jPanelClientsLog = new JPanel();
         jPanelClientsLog.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         jPanelClients.add(jPanelClientsLog, new GridConstraints(2, 5, 5, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -293,6 +433,12 @@ public class FileSynchronizationServer {
         jPanelClientsLog.add(scrollPane1, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         jTextAreaClientsLog = new JTextArea();
         scrollPane1.setViewportView(jTextAreaClientsLog);
+        CLIENT_ARCHIVERadioButton = new JRadioButton();
+        CLIENT_ARCHIVERadioButton.setText("CLIENT_ACHIVE");
+        jPanelClients.add(CLIENT_ARCHIVERadioButton, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        updateListButton = new JButton();
+        updateListButton.setText("Update List");
+        jPanelClients.add(updateListButton, new GridConstraints(0, 6, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jPanelQueues = new JPanel();
         jPanelQueues.setLayout(new GridLayoutManager(4, 7, new Insets(0, 0, 0, 0), -1, -1));
         tabbedPane1.addTab("Queues", jPanelQueues);
@@ -398,21 +544,11 @@ public class FileSynchronizationServer {
                 "Files Folder",
                 "Send Frequency",
                 "Alive Request Frequency"};
-        String[][] data = {{"admin", "vlados", "127.0.0.1", "127.0.0.1", "MacBook Ait Vladislav", "Model OS X", "NEW"
-                , "/input_files", "10", "100"}};
-        TableModel tableModel = new DefaultTableModel(columns, 10000);
+        TableModel tableModel = new DefaultTableModel(columns, 0);
         jTableClients = new JTable(tableModel);
         //jTableClients.setPreferredScrollableViewportSize(new Dimension(450, 63));
         jTableClients.setFillsViewportHeight(true);
         jTableClients.setShowHorizontalLines(true);
         jTableClients.setShowVerticalLines(true);
-
-        jTableClients.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-            public void valueChanged(ListSelectionEvent event) {
-                ClientInfo clientInfo =
-                        Main.server.getClientInfoRepository()
-                                .findByLogin(jTableClients.getValueAt(jTableClients.getSelectedRow(), 0).toString());
-            }
-        });
     }
 }

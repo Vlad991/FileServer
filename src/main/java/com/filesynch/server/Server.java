@@ -49,7 +49,7 @@ public class Server {
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
     private final int FILE_PART_SIZE = 1024; // in bytes (100 kB)
-    public final String FILE_INPUT_DIRECTORY = "input_files/";
+    //public final String FILE_INPUT_DIRECTORY = "input_files/";
     public final String FILE_OUTPUT_DIRECTORY = "output_files/";
     @Getter
     private HashMap<String, ClientInfoDTO> loginSessionHashMap = new HashMap<>();
@@ -82,12 +82,13 @@ public class Server {
     }
 
     public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) {
-        if (clientInfoDTO.getLogin() != null && clientIsRegistered(clientInfoDTO.getLogin())) {
-            return clientInfoDTO;
+        if (clientIsRegistered(clientInfoDTO.getLogin())) {
+            clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
+            return updateClientInfo(clientInfoDTO);
         }
         Logger.log(clientInfoDTO.toString());
         clientInfoDTO.setStatus(ClientStatus.NEW);
-        clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
+        ClientInfo clientInfo = clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
         String login = null;
         NewClient newClient = new NewClient();
         JFrame newClientFrame = Main.showNewClientIcon(clientInfoDTO, newClient);
@@ -99,12 +100,13 @@ public class Server {
             }
         }
         login = newClient.getJTextFieldLogin().getText();
-        clientInfoDTO.setLogin(login);
-        clientInfoDTO.setFilesFolder(newClient.getJTextFieldFilesFolder().getText());
-        clientInfoDTO.setSendFrequency(Integer.parseInt(newClient.getJTextFieldSendFrequency().getText()));
-        clientInfoDTO.setAliveRequestFrequency(Integer.parseInt(newClient.getJTextFieldAliveRequestFrequency().getText()));
-        clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
-        clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
+        clientInfo.setLogin(login);
+        clientInfo.setFilesFolder(newClient.getJTextFieldFilesFolder().getText());
+        clientInfo.setSendFrequency(Integer.parseInt(newClient.getJTextFieldSendFrequency().getText()));
+        clientInfo.setAliveRequestFrequency(Integer.parseInt(newClient.getJTextFieldAliveRequestFrequency().getText()));
+        clientInfo.setStatus(ClientStatus.CLIENT_FIRST);
+        clientInfoRepository.save(clientInfo);
+        clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
         Main.hideNewClientIcon(newClientFrame);
         loginSessionHashMap.put(login, clientInfoDTO);
         Main.updateClientList();
@@ -139,25 +141,34 @@ public class Server {
         loginSessionHashMap.remove(login);
     }
 
-    public String sendTextMessageToServer(String login, String message) {
+    public void sendTextMessageToServer(String login, String message) {
         if (clientIsLoggedIn(login)) {
             TextMessage textMessage = new TextMessage();
             textMessage.setMessage(message);
             textMessage.setClient(clientInfoRepository.findByLogin(login));
             textMessageRepository.save(textMessage);
-            Logger.log(textMessage.getMessage());
-            return "Message Received!";
+            Logger.log(login + ": " + textMessage.getMessage());
         } else {
             System.out.println(message);
-            return "You are not logged in!";
         }
     }
 
     public boolean sendFileInfoToServer(String login, FileInfoDTO fileInfoDTO) {
         if (clientIsLoggedIn(login)) {
-            FileInfoReceived fileInfo = fileInfoReceivedConverter.convertToEntity(fileInfoDTO);
-            fileInfo.setClient(clientInfoRepository.findByLogin(login));
-            fileInfoReceivedRepository.save(fileInfo);
+            FileInfoReceived existingFileInfo = fileInfoReceivedRepository.findByName(fileInfoDTO.getName());
+            FileInfoReceived fileInfoReceived;
+            if (existingFileInfo == null) {
+                fileInfoReceived = fileInfoReceivedConverter.convertToEntity(fileInfoDTO);
+                fileInfoReceived.setClient(clientInfoRepository.findByLogin(login));
+                fileInfoReceivedRepository.save(fileInfoReceived);
+            } else {
+                FileInfoReceived convertedFileInfo = fileInfoReceivedConverter.convertToEntity(fileInfoDTO);
+                convertedFileInfo.setId(existingFileInfo.getId());
+                fileInfoReceived = fileInfoReceivedRepository.save(convertedFileInfo);
+                filePartReceivedRepository.removeAllByFileInfo(fileInfoReceived);
+                File file = new File(fileInfoDTO.getClient().getFilesFolder() + fileInfoReceived.getName());
+                file.delete();
+            }
             Logger.log(fileInfoDTO.toString());
             Main.updateFileQueue();
             return true;
@@ -169,7 +180,8 @@ public class Server {
     public boolean sendFilePartToServer(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
             try {
-                File file = new File(FILE_INPUT_DIRECTORY + login + "/" + filePartDTO.getFileInfoDTO().getName());
+                File file =
+                        new File(loginSessionHashMap.get(login).getFilesFolder() + filePartDTO.getFileInfoDTO().getName());
                 if (filePartDTO.getOrder() == 1) {
                     file.createNewFile();
                 }
@@ -242,7 +254,7 @@ public class Server {
             e.printStackTrace();
             return false;
         }
-        Logger.log("Message sent");
+        Logger.log("message sent to : " + login);
         return true;
     }
 
@@ -558,7 +570,7 @@ public class Server {
         return hash;
     }
 
-    public boolean clientIsLoggedIn(String login) { // todo check in session list
+    public boolean clientIsLoggedIn(String login) {
         ClientInfoDTO client = loginSessionHashMap.get(login);
         if (client == null) {
             Logger.log("Not logged in: " + login);
@@ -584,6 +596,19 @@ public class Server {
             clientInfoDTO.setStatus(clientStatus);
         }
         clientInfoRepository.save(clientInfo);
+        return clientInfoDTO;
+    }
+
+    public List<ClientInfo> getClientInfoDTOList() {
+        return clientInfoRepository.findAll();
+    }
+
+    public ClientInfoDTO updateClientInfo(ClientInfoDTO clientInfoDTO) {
+        ClientInfo clientInfo = clientInfoConverter.convertToEntity(clientInfoDTO);
+        Long id = clientInfoRepository.findByLogin(clientInfoDTO.getLogin()).getId();
+        clientInfo.setId(id);
+        clientInfoRepository.save(clientInfo);
+        loginSessionHashMap.put(clientInfoDTO.getLogin(), clientInfoDTO);
         return clientInfoDTO;
     }
 }
