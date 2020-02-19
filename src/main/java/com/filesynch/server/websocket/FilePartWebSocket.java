@@ -20,7 +20,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         server = Main.server;
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
-        server.getClientTextMessageSessionHashMap().put(login, session);
+        server.getClientFilePartSessionHashMap().put(login, session);
     }
 
     @Override
@@ -32,9 +32,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            boolean result = server.sendFilePartToServer(login, filePartDTO);
-            TextMessage textMessage = new TextMessage(mapper.writeValueAsString(result));
-            server.getClientTextMessageSessionHashMap().get(login).sendMessage(textMessage);
+            server.sendFilePartToServer(login, filePartDTO);
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }

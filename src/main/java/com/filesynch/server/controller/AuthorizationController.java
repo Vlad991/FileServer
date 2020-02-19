@@ -1,6 +1,7 @@
 package com.filesynch.server.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.filesynch.Main;
 import com.filesynch.dto.ClientInfoDTO;
 import com.filesynch.server.Server;
 import org.springframework.http.ResponseEntity;

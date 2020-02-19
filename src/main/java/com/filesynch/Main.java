@@ -167,8 +167,33 @@ public class Main extends SpringBootServletInitializer {
             demoSentList.addElement("" + f.getId() + ". " + f.getName() + " sending to " + f.getClient().getLogin());
         }
 
-        fileSynchronizationServer.getJListQueueReceiving().setModel(demoReceivedList);
-        fileSynchronizationServer.getJListQueueSending().setModel(demoSentList);
+        fileSynchronizationServer.getJListQueueFileInfo().setModel(demoReceivedList);
+        fileSynchronizationServer.getJListQueueFiles().setModel(demoSentList);
+    }
+
+    public static void updateNewQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueNew.forEach((name, clientInfoDTO) -> {
+            demoNewList.addElement("new: " + name);
+        });
+
+        fileSynchronizationServer.getJListQueueNew().setModel(demoNewList);
+    }
+
+    public static void updateQueueTable() {
+        DefaultTableModel model = (DefaultTableModel) fileSynchronizationServer.getJTableQueues().getModel();
+        model.setRowCount(0);
+        model.addRow(new Object[]{"Queue NEW", server.queueNew.size(), server.queueNew.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue TECHNICAL", server.queueTechnical.size(), server.queueTechnical.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue ALIVE", server.queueAlive.size(), server.queueAlive.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue FILE_INFO", server.queueFileInfo.size(), server.queueFileInfo.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue FILES", server.queueFiles.size(), server.queueFiles.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue FILES_PARTS", server.queueFileParts.size(), server.queueFileParts.size(), "", "", "", "", ""});
+
+
+        // All updates
+        updateNewQueue();
+        updateFileQueue();
     }
 
     public static void sendMessage(String login, String message) {

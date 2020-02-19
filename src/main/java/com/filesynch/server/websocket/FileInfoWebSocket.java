@@ -20,7 +20,7 @@ public class FileInfoWebSocket extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         server = Main.server;
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
-        server.getClientTextMessageSessionHashMap().put(login, session);
+        server.getClientFileInfoSessionHashMap().put(login, session);
     }
 
     @Override

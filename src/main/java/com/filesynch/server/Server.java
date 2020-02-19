@@ -48,9 +48,10 @@ public class Server {
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1024; // in bytes (100 kB)
-    //public final String FILE_INPUT_DIRECTORY = "input_files/";
-    public final String FILE_OUTPUT_DIRECTORY = "output_files/";
+    private final int FILE_PART_SIZE = 1; // in bytes (100 kB)
+    public static final String slash = File.separator;
+    //public final String FILE_INPUT_DIRECTORY = "input_files" + slash;
+    public final String FILE_OUTPUT_DIRECTORY = "output_files" + slash;
     @Getter
     private HashMap<String, ClientInfoDTO> loginSessionHashMap = new HashMap<>();
     @Getter
@@ -59,11 +60,16 @@ public class Server {
     private HashMap<String, WebSocketSession> clientFileInfoSessionHashMap = new HashMap<>();
     @Getter
     private HashMap<String, WebSocketSession> clientFilePartSessionHashMap = new HashMap<>();
-    @Getter
-    private HashMap<String, WebSocketSession> clientFirstFilePartSessionHashMap = new HashMap<>();
     @Setter
     private JProgressBar fileProgressBar;
     private ObjectMapper mapper = new ObjectMapper();
+    public HashMap<String, HashMap<String, ArrayList<FilePartDTO>>> filePartHashMap;
+    public HashMap<String, ClientInfoDTO> queueNew = new HashMap<>();
+    public HashMap<String, String> queueTechnical = new HashMap<>();
+    public HashMap<String, ClientInfoDTO> queueAlive = new HashMap<>();
+    public HashMap<String, FileInfoDTO> queueFileInfo = new HashMap<>();
+    public HashMap<String, FileInfoDTO> queueFiles = new HashMap<>();
+    public HashMap<String, FilePartDTO> queueFileParts = new HashMap<>();
 
     public Server(ClientInfoRepository clientInfoRepository, FileInfoReceivedRepository fileInfoReceivedRepository, FileInfoSentRepository fileInfoSentRepository, FilePartReceivedRepository filePartReceivedRepository, FilePartSentRepository filePartSentRepository, TextMessageRepository textMessageRepository) {
         clientInfoConverter = new ClientInfoConverter();
@@ -79,13 +85,18 @@ public class Server {
         this.filePartReceivedRepository = filePartReceivedRepository;
         this.filePartSentRepository = filePartSentRepository;
         this.textMessageRepository = textMessageRepository;
+        filePartHashMap = new HashMap<>();
     }
 
     public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) {
         if (clientIsRegistered(clientInfoDTO.getLogin())) {
             clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
+            queueNew.remove(clientInfoDTO.getName());
+            Main.updateQueueTable();
             return updateClientInfo(clientInfoDTO);
         }
+        queueNew.put(clientInfoDTO.getName(), clientInfoDTO);
+        Main.updateQueueTable();
         Logger.log(clientInfoDTO.toString());
         clientInfoDTO.setStatus(ClientStatus.NEW);
         ClientInfo clientInfo = clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
@@ -114,6 +125,8 @@ public class Server {
         if (!directory.exists()) {
             directory.mkdir();
         }
+        queueNew.remove(clientInfo.getName());
+        Main.updateQueueTable();
         return clientInfoDTO;
     }
 
@@ -155,6 +168,9 @@ public class Server {
 
     public boolean sendFileInfoToServer(String login, FileInfoDTO fileInfoDTO) {
         if (clientIsLoggedIn(login)) {
+            HashMap<String, ArrayList<FilePartDTO>> fileHashMap = new HashMap<>();
+            fileHashMap.put(fileInfoDTO.getName(), new ArrayList<>());
+            filePartHashMap.put(login, fileHashMap);
             FileInfoReceived existingFileInfo = fileInfoReceivedRepository.findByName(fileInfoDTO.getName());
             FileInfoReceived fileInfoReceived;
             if (existingFileInfo == null) {
@@ -169,6 +185,15 @@ public class Server {
                 File file = new File(fileInfoDTO.getClient().getFilesFolder() + fileInfoReceived.getName());
                 file.delete();
             }
+            File file =
+                    new File(loginSessionHashMap.get(login).getFilesFolder() + fileInfoDTO.getName());
+            File fileDir = new File(loginSessionHashMap.get(login).getFilesFolder());
+            fileDir.mkdir();
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             Logger.log(fileInfoDTO.toString());
             Main.updateFileQueue();
             return true;
@@ -179,16 +204,18 @@ public class Server {
 
     public boolean sendFilePartToServer(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
+            ArrayList<FilePartDTO> filePartList =
+                    filePartHashMap.get(login).get(filePartDTO.getFileInfoDTO().getName());
+            if (filePartList.size() == 0) {
+                int size = (int) ((filePartDTO.getFileInfoDTO().getSize() / filePartDTO.getLength()) + 2);
+                filePartList =
+                        new ArrayList<>(size);
+                filePartHashMap.get(login).put(filePartDTO.getFileInfoDTO().getName(), filePartList);
+                filePartList.add(0, null);
+            }
+            filePartList.add(filePartDTO.getOrder(), filePartDTO);
             try {
-                File file =
-                        new File(loginSessionHashMap.get(login).getFilesFolder() + filePartDTO.getFileInfoDTO().getName());
-                if (filePartDTO.getOrder() == 1) {
-                    file.createNewFile();
-                }
-                FileOutputStream out = new FileOutputStream(file, true);
-                out.write(filePartDTO.getData(), 0, filePartDTO.getLength());
-                out.flush();
-                out.close();
+                loadFile(login, filePartDTO.getFileInfoDTO(), filePartDTO.getLength());
                 filePartDTO.setStatus(FilePartStatus.SENT);
                 FilePartReceived filePart = filePartReceivedConverter.convertToEntity(filePartDTO);
                 filePart.setClient(clientInfoRepository.findByLogin(login));
@@ -209,36 +236,23 @@ public class Server {
         }
     }
 
-    public FilePartDTO getFirstNotSentFilePartFromServer(String login, FileInfoDTO fileInfoDTO) {
-        if (!clientIsLoggedIn(login)) {
-            Logger.log("Client is not logged in");
-            return null;
-        }
-        FileInfoReceived fileInfoReceived = fileInfoReceivedRepository
-                .findByHash(fileInfoDTO.getHash());
-        if (fileInfoReceived == null) {
-            FilePartDTO filePartDTO = new FilePartDTO();
-            filePartDTO.setOrder(1);
-            filePartDTO.setStatus(FilePartStatus.NOT_SENT);
-            return filePartDTO;
-        }
-        List<FilePartReceived> filePartReceivedList = filePartReceivedRepository.findAllByFileInfo(fileInfoReceived);
-        if (filePartReceivedList.size() == 0) {
-            FilePartDTO filePartDTO = new FilePartDTO();
-            filePartDTO.setOrder(1);
-            filePartDTO.setStatus(FilePartStatus.NOT_SENT);
-            return filePartDTO;
-        }
-        Collections.sort(filePartReceivedList, new Comparator<FilePartReceived>() {
-            public int compare(FilePartReceived o1, FilePartReceived o2) {
-                return Integer.compare(o1.getOrder(), o2.getOrder());
+    private void loadFile(String login, FileInfoDTO fileInfoDTO, int partLength) throws IOException {
+        ArrayList<FilePartDTO> filePartList = filePartHashMap.get(login).get(fileInfoDTO.getName());
+        int receivedSize = (filePartList.size() - 1) * partLength;
+        if (receivedSize == fileInfoDTO.getSize()) {
+            File file =
+                    new File(loginSessionHashMap.get(login).getFilesFolder() + fileInfoDTO.getName());
+            if (!file.exists()) {
+                file.createNewFile();
             }
-        });
-        FilePartReceived firstNotSentFilePartReceived = filePartReceivedList.stream()
-                .filter(fp -> (fp.getStatus() == FilePartStatus.NOT_SENT))
-                .findFirst()
-                .get();
-        return filePartReceivedConverter.convertToDto(firstNotSentFilePartReceived);
+            FileOutputStream out = new FileOutputStream(file, true);
+            for (int i = 1; i < filePartList.size(); i++) {
+                FilePartDTO part = filePartList.get(i);
+                out.write(part.getData(), 0, part.getLength());
+                out.flush();
+            }
+            out.close();
+        }
     }
 
     public boolean sendTextMessageToClient(String login, String message) {
@@ -457,22 +471,7 @@ public class Server {
                 .findFirst()
                 .get();
         FilePartDTO firstNotSentFilePartDTOFromClient = null;
-        try {
-            WebSocketSession clientFirstFilePartSession =
-                    clientFirstFilePartSessionHashMap.get(fileInfo.getClient().getLogin());
-            synchronized (clientFirstFilePartSession) {
-                clientFirstFilePartSession
-                        .sendMessage(
-                                new org.springframework.web.socket.TextMessage(
-                                        mapper.writeValueAsString(fileInfoDTO)));
-                clientFilePartSession.wait();
-                firstNotSentFilePartDTOFromClient =
-                        (FilePartDTO) clientFilePartSession.getAttributes().get("first_file_part");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        // todo
         FilePartSent firstNotSentFilePartFromClient = null;
         if (firstNotSentFilePartDTOFromClient.getOrder() == 1) {
             firstNotSentFilePartFromClient = firstNotSentFilePart;

@@ -18,6 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 
+@Getter
 public class FileSynchronizationServer {
     @Getter
     private JPanel jPanelServer;
@@ -44,7 +45,7 @@ public class FileSynchronizationServer {
     private JButton jButtonStartServer;
     private JButton jButtonStopServer;
     @Getter
-    private JList jListQueueSending;
+    private JList jListQueueTechnical;
     private JLabel jLabelClientStatusValue;
     private JLabel jLabelIPValue;
     private JLabel jLabelPCNameValue;
@@ -61,7 +62,7 @@ public class FileSynchronizationServer {
     private JButton jButtonSendAllFiles;
     private JScrollPane jScrollPaneQueueReceiving;
     @Getter
-    private JList jListQueueReceiving;
+    private JList jListQueueNew;
     private JPanel jPanelClients;
     private JPanel jPanelQueues;
     private JRadioButton ALLRadioButton;
@@ -77,12 +78,13 @@ public class FileSynchronizationServer {
     private JPanel jPanelClientsLog;
     private JLabel jLabelClientsLog;
     private JTextArea jTextAreaClientsLog;
-    private JList list1;
-    private JList list2;
-    private JList list3;
-    private JList list4;
+    private JList jListQueueFileInfo;
+    private JList jListQueueFiles;
+    private JList jListQueueFileParts;
+    private JList jListQueueAlive;
     private JButton updateQueuesButton;
     private JButton updateListButton;
+    private JTable jTableQueues;
     private JButton jButtonSendAllFilesFast;
     private JButton jButtonSendFileFast;
     private Object[] columns;
@@ -440,20 +442,20 @@ public class FileSynchronizationServer {
         updateListButton.setText("Update List");
         jPanelClients.add(updateListButton, new GridConstraints(0, 6, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jPanelQueues = new JPanel();
-        jPanelQueues.setLayout(new GridLayoutManager(4, 7, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelQueues.setLayout(new GridLayoutManager(5, 7, new Insets(0, 0, 0, 0), -1, -1));
         tabbedPane1.addTab("Queues", jPanelQueues);
         jScrollPaneQueueReceiving = new JScrollPane();
         jPanelQueues.add(jScrollPaneQueueReceiving, new GridConstraints(1, 0, 2, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        jListQueueReceiving = new JList();
+        jListQueueNew = new JList();
         final DefaultListModel defaultListModel1 = new DefaultListModel();
-        jListQueueReceiving.setModel(defaultListModel1);
-        jScrollPaneQueueReceiving.setViewportView(jListQueueReceiving);
+        jListQueueNew.setModel(defaultListModel1);
+        jScrollPaneQueueReceiving.setViewportView(jListQueueNew);
         jScrollPaneQueueSending = new JScrollPane();
         jPanelQueues.add(jScrollPaneQueueSending, new GridConstraints(1, 2, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        jListQueueSending = new JList();
+        jListQueueTechnical = new JList();
         final DefaultListModel defaultListModel2 = new DefaultListModel();
-        jListQueueSending.setModel(defaultListModel2);
-        jScrollPaneQueueSending.setViewportView(jListQueueSending);
+        jListQueueTechnical.setModel(defaultListModel2);
+        jScrollPaneQueueSending.setViewportView(jListQueueTechnical);
         final JLabel label1 = new JLabel();
         label1.setText("NEW");
         jPanelQueues.add(label1, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -462,26 +464,26 @@ public class FileSynchronizationServer {
         jPanelQueues.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
         jPanelQueues.add(scrollPane2, new GridConstraints(1, 4, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        list1 = new JList();
-        scrollPane2.setViewportView(list1);
+        jListQueueFileInfo = new JList();
+        scrollPane2.setViewportView(jListQueueFileInfo);
         final JScrollPane scrollPane3 = new JScrollPane();
         jPanelQueues.add(scrollPane3, new GridConstraints(1, 5, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        list2 = new JList();
-        scrollPane3.setViewportView(list2);
+        jListQueueFiles = new JList();
+        scrollPane3.setViewportView(jListQueueFiles);
         final JScrollPane scrollPane4 = new JScrollPane();
         jPanelQueues.add(scrollPane4, new GridConstraints(1, 6, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        list3 = new JList();
-        scrollPane4.setViewportView(list3);
+        jListQueueFileParts = new JList();
+        scrollPane4.setViewportView(jListQueueFileParts);
         final JLabel label3 = new JLabel();
         label3.setText("FILE_PARTS");
         jPanelQueues.add(label3, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane5 = new JScrollPane();
         jPanelQueues.add(scrollPane5, new GridConstraints(1, 3, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        list4 = new JList();
-        scrollPane5.setViewportView(list4);
+        jListQueueAlive = new JList();
+        scrollPane5.setViewportView(jListQueueAlive);
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        jPanelQueues.add(panel1, new GridConstraints(3, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jPanelQueues.add(panel1, new GridConstraints(4, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         updateQueuesButton = new JButton();
         updateQueuesButton.setText("Update Queues");
         panel1.add(updateQueuesButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -496,6 +498,13 @@ public class FileSynchronizationServer {
         final JLabel label6 = new JLabel();
         label6.setText("FILES");
         jPanelQueues.add(label6, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelQueues.add(panel2, new GridConstraints(3, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final JScrollPane scrollPane6 = new JScrollPane();
+        panel2.add(scrollPane6, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        scrollPane6.setBorder(BorderFactory.createTitledBorder("Queues"));
+        scrollPane6.setViewportView(jTableQueues);
         ButtonGroup buttonGroup;
         buttonGroup = new ButtonGroup();
         buttonGroup.add(NEWRadioButton);
@@ -550,5 +559,22 @@ public class FileSynchronizationServer {
         jTableClients.setFillsViewportHeight(true);
         jTableClients.setShowHorizontalLines(true);
         jTableClients.setShowVerticalLines(true);
+
+        Object[] queuesTableColumns = {
+                "Queue Name",
+                "Now",
+                "10.02.2020",
+                "xx.xx.xxxx",
+                "xx.xx.xxxx",
+                "xx.xx.xxxx",
+                "xx.xx.xxxx",
+                "xx.xx.xxxx",
+        };
+        TableModel queuesTableModel = new DefaultTableModel(queuesTableColumns, 0);
+        jTableQueues = new JTable(queuesTableModel);
+        //jTableClients.setPreferredScrollableViewportSize(new Dimension(450, 63));
+        jTableQueues.setFillsViewportHeight(true);
+        jTableQueues.setShowHorizontalLines(true);
+        jTableQueues.setShowVerticalLines(true);
     }
 }
