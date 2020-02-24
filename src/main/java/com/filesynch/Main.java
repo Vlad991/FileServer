@@ -23,15 +23,10 @@ import org.springframework.web.client.RestTemplate;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.WindowAdapter;
-import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SpringBootApplication
 @PropertySource("classpath:application.yml")
@@ -73,6 +68,13 @@ public class Main extends SpringBootServletInitializer {
             try {
                 ctx = SpringApplication.run(Main.class, stringArgs);
                 server = ctx.getBean(Server.class);
+                //server.filePartHashMap = new HashMap<>();
+                server.queueNew = new HashMap<>();
+                server.queueTechnical = new ArrayList<>();
+                server.queueAlive = new HashMap<>();
+                server.queueFileInfo = new HashMap<>();
+                server.queueFiles = new HashMap<>();
+                server.queueFileParts = new HashMap<>();
                 environment = ctx.getBean(Environment.class);
                 port = environment.getProperty("server.port");
 
@@ -84,8 +86,7 @@ public class Main extends SpringBootServletInitializer {
                 e.printStackTrace();
             }
         }
-        updateClientList();
-        updateFileQueue();
+        updateQueueTable();
     }
 
     public static void stopServer() {
@@ -180,11 +181,57 @@ public class Main extends SpringBootServletInitializer {
         fileSynchronizationServer.getJListQueueNew().setModel(demoNewList);
     }
 
+    public static void updateTechnicalQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueTechnical.forEach((message) -> {
+            demoNewList.addElement(message);
+        });
+
+        fileSynchronizationServer.getJListQueueTechnical().setModel(demoNewList);
+    }
+
+    public static void updateAliveQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueAlive.forEach((login, clientInfoDTO) -> {
+            demoNewList.addElement(login);
+        });
+
+        fileSynchronizationServer.getJListQueueAlive().setModel(demoNewList);
+    }
+
+    public static void updateFileInfoQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueFileInfo.forEach((name, fileInfoDTO) -> {
+            demoNewList.addElement(fileInfoDTO);
+        });
+
+        fileSynchronizationServer.getJListQueueFileInfo().setModel(demoNewList);
+    }
+
+    public static void updateFilesQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueFiles.forEach((name, fileInfoDTO) -> {
+            demoNewList.addElement(fileInfoDTO.getName() + ": sending/receiving");
+        });
+
+        fileSynchronizationServer.getJListQueueFiles().setModel(demoNewList);
+    }
+
+    public static void updateFilePartsQueue() {
+        DefaultListModel demoNewList = new DefaultListModel();
+        server.queueFileParts.forEach((name, filePartDTO) -> {
+            demoNewList.addElement(filePartDTO);
+        });
+
+        fileSynchronizationServer.getJListQueueFileParts().setModel(demoNewList);
+    }
+
     public static void updateQueueTable() {
         DefaultTableModel model = (DefaultTableModel) fileSynchronizationServer.getJTableQueues().getModel();
         model.setRowCount(0);
         model.addRow(new Object[]{"Queue NEW", server.queueNew.size(), server.queueNew.size(), "", "", "", "", ""});
-        model.addRow(new Object[]{"Queue TECHNICAL", server.queueTechnical.size(), server.queueTechnical.size(), "", "", "", "", ""});
+        model.addRow(new Object[]{"Queue TECHNICAL", server.queueTechnical.size(), server.queueTechnical.size(), "", "", ""
+                , "", ""});
         model.addRow(new Object[]{"Queue ALIVE", server.queueAlive.size(), server.queueAlive.size(), "", "", "", "", ""});
         model.addRow(new Object[]{"Queue FILE_INFO", server.queueFileInfo.size(), server.queueFileInfo.size(), "", "", "", "", ""});
         model.addRow(new Object[]{"Queue FILES", server.queueFiles.size(), server.queueFiles.size(), "", "", "", "", ""});
@@ -193,33 +240,24 @@ public class Main extends SpringBootServletInitializer {
 
         // All updates
         updateNewQueue();
-        updateFileQueue();
+        updateTechnicalQueue();
+        updateAliveQueue();
+        updateFileInfoQueue();
+        updateFilesQueue();
+        updateFilePartsQueue();
     }
 
     public static void sendMessage(String login, String message) {
         server.sendTextMessageToClient(login, message);
     }
 
-    public static void sendFileFast(String login, String file) {
-        server.sendFileToClientFast(login, file);
-    }
-
     public static void sendFile(String login, String file) {
-        if (!(file.charAt(0) == '.')) {
-            server.sendFileToClient(login, file);
-        }
-    }
-
-    public static void sendAllFilesFast(String login) {
-        try (Stream<Path> walk = Files.walk(Paths.get(server.FILE_OUTPUT_DIRECTORY
-                .substring(0, server.FILE_OUTPUT_DIRECTORY.length() - 1)))) {
-            List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString()).collect(Collectors.toList());
-            for (String filePath : result) {
-                sendFile(login, filePath.replace(server.FILE_OUTPUT_DIRECTORY, ""));
+        while(!server.sendFileToClient(login, file)) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

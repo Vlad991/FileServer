@@ -24,8 +24,6 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
             server.getClientTextMessageSessionHashMap().put(login, session);
         }
         String messageString = message.getPayload();
-        server.queueTechnical.put(login, messageString);
-        Main.updateQueueTable();
         server.sendTextMessageToServer(login, messageString);
     }
 

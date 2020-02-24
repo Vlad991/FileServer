@@ -4,6 +4,7 @@ import com.filesynch.dto.FilePartStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
@@ -14,7 +15,11 @@ import javax.persistence.*;
 @Table(name = "file_parts_received")
 public class FilePartReceived {
     @Id
-    private Long hashKey;
+    @GeneratedValue(generator="increment")
+    @GenericGenerator(name="increment", strategy = "increment")
+    private Long id;
+    @Column(name = "hash_key")
+    private String hashKey;
     @ManyToOne
     @JoinColumn(name = "file_info_id")
     private FileInfoReceived fileInfo;

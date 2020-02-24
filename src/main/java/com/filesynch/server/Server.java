@@ -10,6 +10,7 @@ import com.filesynch.repository.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.swing.*;
@@ -48,7 +49,7 @@ public class Server {
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1; // in bytes (100 kB)
+    private final int FILE_PART_SIZE = 1024; // in bytes (100 kB)
     public static final String slash = File.separator;
     //public final String FILE_INPUT_DIRECTORY = "input_files" + slash;
     public final String FILE_OUTPUT_DIRECTORY = "output_files" + slash;
@@ -60,16 +61,22 @@ public class Server {
     private HashMap<String, WebSocketSession> clientFileInfoSessionHashMap = new HashMap<>();
     @Getter
     private HashMap<String, WebSocketSession> clientFilePartSessionHashMap = new HashMap<>();
+    @Getter
+    private HashMap<String, WebSocketSession> clientFilePartStatusSessionHashMap = new HashMap<>();
+    @Getter
+    private HashMap<String, WebSocketSession> clientFileStatusSessionHashMap = new HashMap<>();
+    @Getter
+    private HashMap<String, WebSocketSession> clientLoadFileSessionHashMap = new HashMap<>();
     @Setter
     private JProgressBar fileProgressBar;
     private ObjectMapper mapper = new ObjectMapper();
-    public HashMap<String, HashMap<String, ArrayList<FilePartDTO>>> filePartHashMap;
-    public HashMap<String, ClientInfoDTO> queueNew = new HashMap<>();
-    public HashMap<String, String> queueTechnical = new HashMap<>();
-    public HashMap<String, ClientInfoDTO> queueAlive = new HashMap<>();
-    public HashMap<String, FileInfoDTO> queueFileInfo = new HashMap<>();
-    public HashMap<String, FileInfoDTO> queueFiles = new HashMap<>();
-    public HashMap<String, FilePartDTO> queueFileParts = new HashMap<>();
+    //public HashMap<String, HashMap<String, ArrayList<FilePartDTO>>> filePartHashMap;
+    public HashMap<String, ClientInfoDTO> queueNew;
+    public List<String> queueTechnical;
+    public HashMap<String, ClientInfoDTO> queueAlive;
+    public HashMap<String, FileInfoDTO> queueFileInfo;
+    public HashMap<String, FileInfoDTO> queueFiles;
+    public HashMap<String, FilePartDTO> queueFileParts;
 
     public Server(ClientInfoRepository clientInfoRepository, FileInfoReceivedRepository fileInfoReceivedRepository, FileInfoSentRepository fileInfoSentRepository, FilePartReceivedRepository filePartReceivedRepository, FilePartSentRepository filePartSentRepository, TextMessageRepository textMessageRepository) {
         clientInfoConverter = new ClientInfoConverter();
@@ -85,7 +92,13 @@ public class Server {
         this.filePartReceivedRepository = filePartReceivedRepository;
         this.filePartSentRepository = filePartSentRepository;
         this.textMessageRepository = textMessageRepository;
-        filePartHashMap = new HashMap<>();
+        //filePartHashMap = new HashMap<>();
+        queueNew = new HashMap<>();
+        queueTechnical = new ArrayList<>();
+        queueAlive = new HashMap<>();
+        queueFileInfo = new HashMap<>();
+        queueFiles = new HashMap<>();
+        queueFileParts = new HashMap<>();
     }
 
     public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) {
@@ -161,6 +174,8 @@ public class Server {
             textMessage.setClient(clientInfoRepository.findByLogin(login));
             textMessageRepository.save(textMessage);
             Logger.log(login + ": " + textMessage.getMessage());
+            queueTechnical.add(message);
+            Main.updateFileQueue();
         } else {
             System.out.println(message);
         }
@@ -170,8 +185,9 @@ public class Server {
         if (clientIsLoggedIn(login)) {
             HashMap<String, ArrayList<FilePartDTO>> fileHashMap = new HashMap<>();
             fileHashMap.put(fileInfoDTO.getName(), new ArrayList<>());
-            filePartHashMap.put(login, fileHashMap);
-            FileInfoReceived existingFileInfo = fileInfoReceivedRepository.findByName(fileInfoDTO.getName());
+            //filePartHashMap.put(login, fileHashMap);
+            FileInfoReceived existingFileInfo = fileInfoReceivedRepository
+                    .findByHashAndName(fileInfoDTO.getHash(), fileInfoDTO.getName());
             FileInfoReceived fileInfoReceived;
             if (existingFileInfo == null) {
                 fileInfoReceived = fileInfoReceivedConverter.convertToEntity(fileInfoDTO);
@@ -195,6 +211,7 @@ public class Server {
                 e.printStackTrace();
             }
             Logger.log(fileInfoDTO.toString());
+            queueFileInfo.put(fileInfoDTO.getHash(), fileInfoDTO);
             Main.updateFileQueue();
             return true;
         } else {
@@ -204,28 +221,25 @@ public class Server {
 
     public boolean sendFilePartToServer(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
-            ArrayList<FilePartDTO> filePartList =
-                    filePartHashMap.get(login).get(filePartDTO.getFileInfoDTO().getName());
-            if (filePartList.size() == 0) {
-                int size = (int) ((filePartDTO.getFileInfoDTO().getSize() / filePartDTO.getLength()) + 2);
-                filePartList =
-                        new ArrayList<>(size);
-                filePartHashMap.get(login).put(filePartDTO.getFileInfoDTO().getName(), filePartList);
-                filePartList.add(0, null);
-            }
-            filePartList.add(filePartDTO.getOrder(), filePartDTO);
             try {
-                loadFile(login, filePartDTO.getFileInfoDTO(), filePartDTO.getLength());
+                String partHash = loadFilePart(login, filePartDTO);
+                if (!partHash.equals(filePartDTO.getHashKey())) {
+                    filePartDTO.setStatus(FilePartStatus.NOT_SENT);
+                    sendFilePartStatusToClient(login, filePartDTO);
+                    return false;
+                }
                 filePartDTO.setStatus(FilePartStatus.SENT);
                 FilePartReceived filePart = filePartReceivedConverter.convertToEntity(filePartDTO);
                 filePart.setClient(clientInfoRepository.findByLogin(login));
                 FileInfoReceived fileInfo = fileInfoReceivedRepository
-                        .findByHash(filePart.getFileInfo().getHash());
+                        .findByHashAndName(filePart.getFileInfo().getHash(), filePart.getFileInfo().getName());
                 if (fileInfo != null) {
                     filePart.setFileInfo(fileInfo);
                 }
                 filePartReceivedRepository.save(filePart);
-                Main.updateFileQueue();
+                sendFilePartStatusToClient(login, filePartDTO);
+                //queueFileParts.put(filePartDTO.getHashKey().toString(), filePartDTO);
+                //Main.updateFileQueue();
             } catch (Exception e) {
                 e.printStackTrace();
                 return false;
@@ -236,22 +250,83 @@ public class Server {
         }
     }
 
-    private void loadFile(String login, FileInfoDTO fileInfoDTO, int partLength) throws IOException {
-        ArrayList<FilePartDTO> filePartList = filePartHashMap.get(login).get(fileInfoDTO.getName());
-        int receivedSize = (filePartList.size() - 1) * partLength;
-        if (receivedSize == fileInfoDTO.getSize()) {
-            File file =
-                    new File(loginSessionHashMap.get(login).getFilesFolder() + fileInfoDTO.getName());
-            if (!file.exists()) {
-                file.createNewFile();
-            }
-            FileOutputStream out = new FileOutputStream(file, true);
-            for (int i = 1; i < filePartList.size(); i++) {
-                FilePartDTO part = filePartList.get(i);
-                out.write(part.getData(), 0, part.getLength());
-                out.flush();
-            }
-            out.close();
+    public boolean sendFilePartStatusToServer(String login, FilePartDTO filePartDTO) {
+        if (clientIsLoggedIn(login)) {
+            FilePartSent filePartSent = filePartSentRepository.findByHashKey(filePartDTO.getHashKey());
+            filePartSent.setStatus(filePartDTO.getStatus());
+            filePartSentRepository.save(filePartSent);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private String loadFilePart(String login, FilePartDTO filePartDTO) throws IOException {
+        File file =
+                new File(
+                        loginSessionHashMap.get(login).getFilesFolder()
+                                + filePartDTO.getFileInfoDTO().getName().split("\\.")[0]
+                                + "__" + filePartDTO.getOrder() + "."
+                                + filePartDTO.getFileInfoDTO().getName().split("\\.")[1]);
+        if (!file.exists()) {
+            file.createNewFile();
+        }
+        FileOutputStream out = new FileOutputStream(file, true);
+        out.write(filePartDTO.getData(), 0, filePartDTO.getLength());
+        out.flush();
+        out.close();
+        return getFileHash(loginSessionHashMap.get(login).getFilesFolder()
+                + filePartDTO.getFileInfoDTO().getName().split("\\.")[0]
+                + "__" + filePartDTO.getOrder() + "."
+                + filePartDTO.getFileInfoDTO().getName().split("\\.")[1]);
+    }
+
+    public void loadFile(String login, FileInfoDTO fileInfoDTO) throws IOException {
+        File file =
+                new File(loginSessionHashMap.get(login).getFilesFolder() + fileInfoDTO.getName());
+        if (!file.exists()) {
+            file.createNewFile();
+        }
+        FileOutputStream out = new FileOutputStream(file, true);
+        long filePartsQuantity = fileInfoDTO.getSize() / FILE_PART_SIZE + 1l;
+        for (int i = 1; i <= filePartsQuantity; i++) {
+            FileInputStream in = new FileInputStream(
+                    loginSessionHashMap.get(login).getFilesFolder()
+                    + fileInfoDTO.getName().split("\\.")[0]
+                    + "__" + i + "."
+                    + fileInfoDTO.getName().split("\\.")[1]);
+            byte[] filePartData = new byte[FILE_PART_SIZE];
+            int bytesCount = in.read(filePartData);
+            out.write(filePartData, 0, bytesCount);
+            out.flush();
+        }
+        out.close();
+        String realFileHash = getFileHash(loginSessionHashMap.get(login).getFilesFolder() + fileInfoDTO.getName());
+        if (realFileHash.equals(fileInfoDTO.getHash())) {
+            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
+        } else {
+            fileInfoDTO.setFileStatus(FileStatus.NOT_TRANSFERRED);
+        }
+        sendFileStatusToClient(login, fileInfoDTO);
+    }
+
+    private void sendFileStatusToClient(String login, FileInfoDTO fileInfoDTO) {
+        WebSocketSession session = clientFileStatusSessionHashMap.get(login);
+        try {
+            session.sendMessage(new org.springframework.web.socket.TextMessage(
+                    mapper.writeValueAsString(fileInfoDTO)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendFilePartStatusToClient(String login, FilePartDTO filePartDTO) {
+        WebSocketSession session = clientFilePartStatusSessionHashMap.get(login);
+        try {
+            session.sendMessage(new org.springframework.web.socket.TextMessage(
+                    mapper.writeValueAsString(filePartDTO)));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -269,78 +344,8 @@ public class Server {
             return false;
         }
         Logger.log("message sent to : " + login);
-        return true;
-    }
-
-    // this is cycle for sending file parts from client to server
-    public boolean sendFileToClientFast(String login, String filename) {
-        if (filename.charAt(0) == '.') {
-            Logger.log("Can't send hidden file");
-            return true;
-        }
-        setServerStatus(ServerStatus.SERVER_WORK);
-        WebSocketSession clientFileInfoSession = clientFileInfoSessionHashMap.get(login);
-        WebSocketSession clientFilePartSession = clientFilePartSessionHashMap.get(login);
-        if (clientFileInfoSession == null) {
-            Logger.log("Login not correct");
-            return false;
-        }
-        try {
-            String filePathname = FILE_OUTPUT_DIRECTORY + filename;
-            File file = new File(filePathname);
-            FileInputStream in = new FileInputStream(file);
-
-            FileInfoDTO fileInfoDTO = new FileInfoDTO();
-            fileInfoDTO.setHash(getFileHash(filePathname));
-            fileInfoDTO.setName(filename);
-            fileInfoDTO.setSize(file.length());
-            ClientInfo clientInfo = clientInfoRepository.findByLogin(login);
-            ClientInfoDTO clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
-            fileInfoDTO.setClient(clientInfoDTO);
-            clientFileInfoSession.sendMessage(new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO)));
-            FileInfoSent fileInfo = fileInfoSentConverter.convertToEntity(fileInfoDTO);
-            fileInfo.setClient(clientInfo);
-            fileInfo.setFileStatus(FileStatus.TRANSFER_PROCESS);
-            fileInfo = fileInfoSentRepository.save(fileInfo);
-            Main.updateFileQueue();
-
-            byte[] fileData = new byte[FILE_PART_SIZE];
-            int bytesCount = in.read(fileData);
-            int step = 1;
-            fileProgressBar.setMinimum(0);
-            fileProgressBar.setMaximum((int) fileInfoDTO.getSize());
-            int progressValue = 0;
-            while (bytesCount > 0) {
-                Logger.log(String.valueOf(bytesCount));
-                FilePartDTO filePartDTO = new FilePartDTO();
-                filePartDTO.setOrder(step);
-                step++;
-                filePartDTO.setHashKey((long) filePartDTO.hashCode());
-                filePartDTO.setFileInfoDTO(fileInfoDTO);
-                filePartDTO.setData(fileData);
-                filePartDTO.setLength(bytesCount);
-                filePartDTO.setStatus(FilePartStatus.NOT_SENT);
-                filePartDTO.setClient(clientInfoDTO);
-                clientFilePartSession
-                        .sendMessage(
-                                new org.springframework.web.socket.TextMessage(mapper
-                                        .writeValueAsString(filePartDTO)));
-                FilePartSent filePartSent = filePartSentConverter.convertToEntity(filePartDTO);
-                filePartSent.setClient(clientInfo);
-                filePartSent.setFileInfo(fileInfo);
-                filePartSent.setStatus(FilePartStatus.SENT);
-                filePartSentRepository.save(filePartSent);
-
-                bytesCount = in.read(fileData);
-                progressValue += FILE_PART_SIZE;
-                fileProgressBar.setValue(progressValue);
-                //Thread.sleep(2000);
-            }
-            Main.updateFileQueue();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        queueTechnical.add(message);
+        Main.updateFileQueue();
         return true;
     }
 
@@ -354,9 +359,12 @@ public class Server {
             List<String> filePathNames = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
             for (String filePath : filePathNames) {
-                boolean result = sendFileToClient(login, filePath.replace(FILE_OUTPUT_DIRECTORY, ""));
-                if (!result) {
-                    return false;
+                while(!sendFileToClient(login, filePath.replace(FILE_OUTPUT_DIRECTORY, ""))) {
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } catch (IOException e) {
@@ -384,13 +392,12 @@ public class Server {
             Logger.log("File " + filename + " not exists");
             return false;
         }
-        LinkedHashMap<Integer, FilePartDTO> filePartHashMap = new LinkedHashMap<>();
         FileInfoSent fileInfo = null;
         FileInfoDTO fileInfoDTO = null;
         ClientInfo clientInfo = null;
         try {
             FileInputStream in = new FileInputStream(file);
-            fileInfo = fileInfoSentRepository.findByHash(fileHash);
+            fileInfo = fileInfoSentRepository.findByHashAndName(fileHash, filename);
             if (fileInfo == null) {
                 fileInfoDTO = new FileInfoDTO();
                 fileInfoDTO.setHash(fileHash);
@@ -407,7 +414,8 @@ public class Server {
                                 new org.springframework.web.socket.TextMessage(mapper
                                         .writeValueAsString(fileInfoDTO)));
                 fileInfoSentRepository.save(fileInfo);
-                Main.updateFileQueue();
+                //queueFileInfo.put(fileInfoDTO.getHash(), fileInfoDTO);
+                //Main.updateFileQueue();
             }
             fileInfoDTO = fileInfoSentConverter.convertToDto(fileInfo);
             clientInfo = clientInfoRepository.findByLogin(login);
@@ -422,10 +430,14 @@ public class Server {
                 filePartDTO.setFileInfoDTO(fileInfoDTO);
                 filePartDTO.setData(fileData);
                 filePartDTO.setLength(bytesCount);
-                filePartDTO.setStatus(FilePartStatus.NOT_SENT);
+                filePartDTO.setStatus(FilePartStatus.WAIT);
                 filePartDTO.setClient(clientInfoDTO);
-                filePartDTO.setHashKey((long) filePartDTO.hashCode());
-                filePartHashMap.put(step, filePartDTO);
+                filePartDTO.setHashKey(getFilePartHash(bytesCount, fileData));
+                FilePartSent filePart = filePartSentConverter.convertToEntity(filePartDTO);
+                filePart.setFileInfo(fileInfo);
+                filePart.setClient(clientInfo);
+                filePartSentRepository.save(filePart);
+                sendFilePartToClient(filePartDTO, clientFilePartSession);
                 step++;
                 fileData = new byte[FILE_PART_SIZE];
                 bytesCount = in.read(fileData);
@@ -433,112 +445,29 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        switch (fileInfo.getFileStatus()) {
-            case NOT_TRANSFERRED:
-                filePartSentRepository.deleteAllByClient_LoginAndFileInfo_Id(login, fileInfo.getId());
-                for (Map.Entry<Integer, FilePartDTO> entry : filePartHashMap.entrySet()) {
-                    FilePartSent filePart = filePartSentConverter.convertToEntity(entry.getValue());
-                    filePart.setClient(clientInfo);
-                    filePart.setFileInfo(fileInfo);
-                    filePartSentRepository.save(filePart);
-                }
-                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
-            case TRANSFER_PROCESS:
-                return sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
-            case TRANSFERRED:
-                return true;
+        //queueFiles.put(fileInfoDTO.getHash(), fileInfoDTO);
+        //Main.updateFileQueue();
+        //Logger.log("File with hash: " + fileInfoDTO.getHash() + " sent");
+        List<FilePartSent> filePartsWait = filePartSentRepository
+                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
+        List<FilePartSent> filePartsNotSent = filePartSentRepository
+                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
+        if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
+            return true;
         }
-        Main.updateFileQueue();
-        Logger.log("File with hash: " + fileInfoDTO.getHash() + " sent");
-        return true;
-    }
-
-    public boolean sendAllFilePartsToClient(LinkedHashMap<Integer, FilePartDTO> filePartHashMap,
-                                            FileInfoDTO fileInfoDTO,
-                                            WebSocketSession clientFilePartSession) {
-        FileInfoSent fileInfo = fileInfoSentRepository.findByHash(fileInfoDTO.getHash());
-        fileInfo.setFileStatus(FileStatus.TRANSFER_PROCESS);
-        fileInfo = fileInfoSentRepository.save(fileInfo);
-        List<FilePartSent> filePartList = filePartSentRepository.findAllByFileInfo(fileInfo);
-        Collections.sort(filePartList, new Comparator<FilePartSent>() {
-            public int compare(FilePartSent o1, FilePartSent o2) {
-                return Integer.compare(o1.getOrder(), o2.getOrder());
-            }
-        });
-        FilePartSent firstNotSentFilePart = filePartList.stream()
-                .filter(fp -> (fp.getStatus() == FilePartStatus.NOT_SENT))
-                .findFirst()
-                .get();
-        FilePartDTO firstNotSentFilePartDTOFromClient = null;
-        // todo
-        FilePartSent firstNotSentFilePartFromClient = null;
-        if (firstNotSentFilePartDTOFromClient.getOrder() == 1) {
-            firstNotSentFilePartFromClient = firstNotSentFilePart;
-        } else {
-            firstNotSentFilePartFromClient =
-                    filePartSentConverter.convertToEntity(firstNotSentFilePartDTOFromClient);
-        }
-        if (firstNotSentFilePart.getOrder() != firstNotSentFilePartFromClient.getOrder()) {
-            if (firstNotSentFilePart.getOrder() > firstNotSentFilePartFromClient.getOrder()) {
-                for (FilePartSent fp : filePartList) {
-                    if (fp.getOrder() == (firstNotSentFilePart.getOrder() - 1)) {
-                        fp.setStatus(FilePartStatus.NOT_SENT);
-                        break;
-                    }
-                }
-            } else {
-                firstNotSentFilePart.setStatus(FilePartStatus.SENT);
-            }
-            sendAllFilePartsToClient(filePartHashMap, fileInfoDTO, clientFilePartSession);
-        } else {
-            fileProgressBar.setMinimum(0);
-            fileProgressBar.setMaximum((int) fileInfoDTO.getSize());
-            int progressValue = 0;
-            for (int i = firstNotSentFilePart.getOrder(); i <= filePartHashMap.size(); i++) {
-                try {
-                    FilePartDTO filePartDTOToSend = filePartHashMap.get(i);
-                    FilePartSent filePartToSend = filePartList.get(i - 1);
-
-                    sendFilePartToClient(filePartDTOToSend, clientFilePartSession);
-
-                    filePartToSend.setStatus(FilePartStatus.SENT);
-                    filePartSentRepository.save(filePartToSend);
-                    progressValue += FILE_PART_SIZE;
-                    fileProgressBar.setValue(progressValue);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return false; //todo? (break)
-                }
-            }
-        }
-        fileInfo.setFileStatus(FileStatus.TRANSFERRED);
-        fileInfoSentRepository.save(fileInfo);
-        return true;
+        return false;
     }
 
     public boolean sendFilePartToClient(FilePartDTO filePartDTO, WebSocketSession clientFilePartSession) {
-        boolean result = true;
         try {
             clientFilePartSession.
                     sendMessage(
                             new org.springframework.web.socket.TextMessage(
                                     mapper.writeValueAsString(filePartDTO)));
-            //Thread.sleep(2000);
         } catch (IOException e) {
-            result = false;
             e.printStackTrace();
-            return false;
         }
-        Logger.log(String.valueOf(result));
-        if (result) {
-            FilePartSent filePartSent = filePartSentRepository.findByHashKey(filePartDTO.getHashKey());
-            filePartSent.setStatus(FilePartStatus.SENT);
-            filePartSentRepository.save(filePartSent);
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     public String getFileHash(String filePathname) {
@@ -555,8 +484,24 @@ public class Server {
             while ((bytesCount = fis.read(byteArray)) != -1) {
                 digest.update(byteArray, 0, bytesCount);
             }
-            ;
             fis.close();
+            byte[] bytes = digest.digest();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < bytes.length; i++) {
+                sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+            }
+            hash = sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return hash;
+    }
+
+    private String getFilePartHash(int bytesCount, byte[] byteArray) {
+        String hash = "";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            digest.update(byteArray, 0, bytesCount);
             byte[] bytes = digest.digest();
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < bytes.length; i++) {

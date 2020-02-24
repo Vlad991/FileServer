@@ -20,7 +20,16 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
         registry.addHandler(filePartWebSocket(), "/file-part")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
+        registry.addHandler(filePartStatusWebSocket(), "/file-part-status")
+                .addInterceptors(new ClientSecurityInterceptor())
+                .setAllowedOrigins("*");
         registry.addHandler(fileInfoWebSocket(), "/file-info")
+                .addInterceptors(new ClientSecurityInterceptor())
+                .setAllowedOrigins("*");
+        registry.addHandler(fileStatusWebSocket(), "/file-status")
+                .addInterceptors(new ClientSecurityInterceptor())
+                .setAllowedOrigins("*");
+        registry.addHandler(loadFileWebSocket(), "/load-file")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
     }
@@ -38,5 +47,20 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
     @Bean
     public FileInfoWebSocket fileInfoWebSocket(){
         return new FileInfoWebSocket();
+    }
+
+    @Bean
+    public FilePartStatusWebSocket filePartStatusWebSocket(){
+        return new FilePartStatusWebSocket();
+    }
+
+    @Bean
+    public FileStatusWebSocket fileStatusWebSocket(){
+        return new FileStatusWebSocket();
+    }
+
+    @Bean
+    public LoadFileWebSocket loadFileWebSocket(){
+        return new LoadFileWebSocket();
     }
 }
