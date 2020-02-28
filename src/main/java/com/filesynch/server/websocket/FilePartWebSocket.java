@@ -21,6 +21,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
         server = Main.server;
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartSessionHashMap().put(login, session);
+        Logger.log("/file-part/" + login + ": connected");
     }
 
     @Override
@@ -42,6 +43,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartSessionHashMap().remove(login);
+        Logger.log("/file-part/" + login + ": disconnected");
         super.afterConnectionClosed(session, status);
     }
 }

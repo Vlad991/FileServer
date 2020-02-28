@@ -14,7 +14,7 @@ import javax.persistence.*;
 @NoArgsConstructor
 @ToString
 @Entity
-@Table(name = "file_info_received")
+@Table(name = "file_info_reveived")
 public class FileInfoReceived {
     @Id
     @GeneratedValue(generator="increment")
@@ -22,10 +22,12 @@ public class FileInfoReceived {
     private Long id;
     @Column(name = "md5_hash")
     private String hash;
-    @Column(name = "name")
+    @Column(name = "name", unique = true)
     private String name;
     @Column(name = "size")
     private long size; // in bytes
+    @Column(name = "parts_quantity")
+    private int partsQuantity;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private FileStatus fileStatus;

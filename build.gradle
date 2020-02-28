@@ -52,6 +52,7 @@ dependencies {
     //compile group: 'org.slf4j', name: 'slf4j-nop', version: '1.7.30'
 
     // DB Connection
+    compile group: 'com.h2database', name: 'h2', version: '1.4.200'
     compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.16'
     compile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk18', version: '3.0.8'
 

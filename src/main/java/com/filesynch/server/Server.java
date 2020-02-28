@@ -268,9 +268,10 @@ public class Server {
                                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[0]
                                 + "__" + filePartDTO.getOrder() + "."
                                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[1]);
-        if (!file.exists()) {
-            file.createNewFile();
+        if (file.exists()) {
+            file.delete();
         }
+        file.createNewFile();
         FileOutputStream out = new FileOutputStream(file, true);
         out.write(filePartDTO.getData(), 0, filePartDTO.getLength());
         out.flush();
@@ -288,13 +289,12 @@ public class Server {
             file.createNewFile();
         }
         FileOutputStream out = new FileOutputStream(file, true);
-        long filePartsQuantity = fileInfoDTO.getSize() / FILE_PART_SIZE + 1l;
-        for (int i = 1; i <= filePartsQuantity; i++) {
+        for (int i = 1; i <= fileInfoDTO.getPartsQuantity(); i++) {
             FileInputStream in = new FileInputStream(
                     loginSessionHashMap.get(login).getFilesFolder()
-                    + fileInfoDTO.getName().split("\\.")[0]
-                    + "__" + i + "."
-                    + fileInfoDTO.getName().split("\\.")[1]);
+                            + fileInfoDTO.getName().split("\\.")[0]
+                            + "__" + i + "."
+                            + fileInfoDTO.getName().split("\\.")[1]);
             byte[] filePartData = new byte[FILE_PART_SIZE];
             int bytesCount = in.read(filePartData);
             out.write(filePartData, 0, bytesCount);
@@ -359,7 +359,7 @@ public class Server {
             List<String> filePathNames = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
             for (String filePath : filePathNames) {
-                while(!sendFileToClient(login, filePath.replace(FILE_OUTPUT_DIRECTORY, ""))) {
+                while (!sendFileToClient(login, filePath.replace(FILE_OUTPUT_DIRECTORY, ""))) {
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
@@ -403,6 +403,8 @@ public class Server {
                 fileInfoDTO.setHash(fileHash);
                 fileInfoDTO.setName(filename);
                 fileInfoDTO.setSize(file.length());
+                fileInfoDTO.setPartsQuantity((int) (file.length() / FILE_PART_SIZE
+                        + (file.length() % FILE_PART_SIZE == 0 ? 0 : 1)));
                 clientInfo = clientInfoRepository.findByLogin(login);
                 ClientInfoDTO clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
                 fileInfoDTO.setClient(clientInfoDTO);
@@ -448,11 +450,24 @@ public class Server {
         //queueFiles.put(fileInfoDTO.getHash(), fileInfoDTO);
         //Main.updateFileQueue();
         //Logger.log("File with hash: " + fileInfoDTO.getHash() + " sent");
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         List<FilePartSent> filePartsWait = filePartSentRepository
                 .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
         List<FilePartSent> filePartsNotSent = filePartSentRepository
                 .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
         if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
+            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
+            try {
+                clientLoadFileSessionHashMap.get(login).sendMessage(
+                        new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO))
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         return false;

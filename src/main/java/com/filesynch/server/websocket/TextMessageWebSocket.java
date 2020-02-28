@@ -1,6 +1,7 @@
 package com.filesynch.server.websocket;
 
 import com.filesynch.Main;
+import com.filesynch.server.Logger;
 import com.filesynch.server.Server;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -15,6 +16,7 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
         server = Main.server;
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientTextMessageSessionHashMap().put(login, session);
+        Logger.log("/text/" + login + ": connected");
     }
 
     @Override
@@ -31,6 +33,7 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientTextMessageSessionHashMap().remove(login);
+        Logger.log("/text/" + login + ": disconnected");
         super.afterConnectionClosed(session, status);
     }
 }

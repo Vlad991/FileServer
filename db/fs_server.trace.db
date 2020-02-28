@@ -1,0 +1,28 @@
+2020-02-28 16:38:01 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Синтаксическая ошибка в выражении SQL "DELETE *[*] FROM FILE_INFO_REVEIVED"; ожидалось "identifier"
+Syntax error in SQL statement "DELETE *[*] FROM FILE_INFO_REVEIVED"; expected "identifier"; SQL statement:
+delete * FROM FILE_INFO_REVEIVED [42001-200]
+2020-02-28 16:38:14 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Синтаксическая ошибка в выражении SQL "DELETE *[*] FROM FILE_INFO_REVEIVED WHERE 1"; ожидалось "identifier"
+Syntax error in SQL statement "DELETE *[*] FROM FILE_INFO_REVEIVED WHERE 1"; expected "identifier"; SQL statement:
+delete * FROM FILE_INFO_REVEIVED where 1 [42001-200]
+2020-02-28 16:39:15 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Невозможно удалить "CLIENT_LIST", пока существует зависимый объект "FKFOV1YWB7O7E5B6ILGRGCQF4EY, FK70G5670K4PI0OECHIQKO7R7LI, FKQG2K3EVX62A4F2RUYOF8B9GRY, FKRNYB9DPWS4EK2YNH4WUN0H2UQ, FKSDIXQS42FLS7PIEES4MQ5BQTG"
+Cannot drop "CLIENT_LIST" because "FKFOV1YWB7O7E5B6ILGRGCQF4EY, FK70G5670K4PI0OECHIQKO7R7LI, FKQG2K3EVX62A4F2RUYOF8B9GRY, FKRNYB9DPWS4EK2YNH4WUN0H2UQ, FKSDIXQS42FLS7PIEES4MQ5BQTG" depends on it; SQL statement:
+drop table CLIENT_LIST [90107-200]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:576)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:429)
+	at org.h2.message.DbException.get(DbException.java:205)
+	at org.h2.command.ddl.DropTable.prepareDrop(DropTable.java:98)
+	at org.h2.command.ddl.DropTable.update(DropTable.java:124)
+	at org.h2.command.CommandContainer.update(CommandContainer.java:198)
+	at org.h2.command.Command.executeUpdate(Command.java:251)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:228)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:201)
+	at org.h2.server.web.WebApp.getResult(WebApp.java:1459)
+	at org.h2.server.web.WebApp.query(WebApp.java:1116)
+	at org.h2.server.web.WebApp$1.next(WebApp.java:1078)
+	at org.h2.server.web.WebApp$1.next(WebApp.java:1065)
+	at org.h2.server.web.WebThread.process(WebThread.java:178)
+	at org.h2.server.web.WebThread.run(WebThread.java:94)
+	at java.lang.Thread.run(Thread.java:748)

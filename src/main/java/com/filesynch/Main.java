@@ -253,11 +253,6 @@ public class Main extends SpringBootServletInitializer {
 
     public static void sendFile(String login, String file) {
         while(!server.sendFileToClient(login, file)) {
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 
