@@ -49,7 +49,7 @@ public class Server {
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1024; // in bytes (100 kB)
+    private final int FILE_PART_SIZE = 1024*5; // in bytes (100 kB)
     public static final String slash = File.separator;
     //public final String FILE_INPUT_DIRECTORY = "input_files" + slash;
     public final String FILE_OUTPUT_DIRECTORY = "output_files" + slash;
@@ -252,7 +252,11 @@ public class Server {
 
     public boolean sendFilePartStatusToServer(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
-            FilePartSent filePartSent = filePartSentRepository.findByHashKey(filePartDTO.getHashKey());
+            FilePartSent filePartSent = filePartSentRepository
+                    .findByHashKeyAndFileInfo_NameAndClient_Login(
+                            filePartDTO.getHashKey(),
+                            filePartDTO.getFileInfoDTO().getName(),
+                            login);
             filePartSent.setStatus(filePartDTO.getStatus());
             filePartSentRepository.save(filePartSent);
             return true;
@@ -427,19 +431,37 @@ public class Server {
             int bytesCount = in.read(fileData);
             int step = 1;
             while (bytesCount > 0) {
-                FilePartDTO filePartDTO = new FilePartDTO();
-                filePartDTO.setOrder(step);
-                filePartDTO.setFileInfoDTO(fileInfoDTO);
-                filePartDTO.setData(fileData);
-                filePartDTO.setLength(bytesCount);
-                filePartDTO.setStatus(FilePartStatus.WAIT);
-                filePartDTO.setClient(clientInfoDTO);
-                filePartDTO.setHashKey(getFilePartHash(bytesCount, fileData));
-                FilePartSent filePart = filePartSentConverter.convertToEntity(filePartDTO);
-                filePart.setFileInfo(fileInfo);
-                filePart.setClient(clientInfo);
-                filePartSentRepository.save(filePart);
-                sendFilePartToClient(filePartDTO, clientFilePartSession);
+                String hashKey = getFilePartHash(bytesCount, fileData);
+                FilePartSent existsFilePartSent =
+                        filePartSentRepository.findByHashKeyAndFileInfo_NameAndClient_Login(hashKey, filename, login);
+                if (existsFilePartSent == null) {
+                    FilePartDTO filePartDTO = new FilePartDTO();
+                    filePartDTO.setOrder(step);
+                    filePartDTO.setFileInfoDTO(fileInfoDTO);
+                    filePartDTO.setData(fileData);
+                    filePartDTO.setLength(bytesCount);
+                    filePartDTO.setStatus(FilePartStatus.WAIT);
+                    filePartDTO.setClient(clientInfoDTO);
+                    filePartDTO.setHashKey(getFilePartHash(bytesCount, fileData));
+                    FilePartSent filePart = filePartSentConverter.convertToEntity(filePartDTO);
+                    filePart.setFileInfo(fileInfo);
+                    filePart.setClient(clientInfo);
+                    filePartSentRepository.save(filePart);
+                    sendFilePartToClient(filePartDTO, clientFilePartSession);
+                } else if (!(existsFilePartSent.getStatus() == FilePartStatus.SENT)) {
+                    FilePartDTO filePartDTO = filePartSentConverter.convertToDto(existsFilePartSent);
+                    filePartDTO.setOrder(step);
+                    filePartDTO.setFileInfoDTO(fileInfoDTO);
+                    filePartDTO.setData(fileData);
+                    filePartDTO.setLength(bytesCount);
+                    filePartDTO.setStatus(FilePartStatus.WAIT);
+                    filePartDTO.setClient(clientInfoDTO);
+                    filePartDTO.setHashKey(getFilePartHash(bytesCount, fileData));
+                    FilePartSent filePart = filePartSentConverter.convertToEntity(filePartDTO);
+                    filePart.setFileInfo(fileInfo);
+                    filePart.setClient(clientInfo);
+                    sendFilePartToClient(filePartDTO, clientFilePartSession);
+                }
                 step++;
                 fileData = new byte[FILE_PART_SIZE];
                 bytesCount = in.read(fileData);

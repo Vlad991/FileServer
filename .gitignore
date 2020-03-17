@@ -2,3 +2,6 @@
 /.gradle/
 /input_files
 /output_files
+/FileServer-1.0-SNAPSHOT.jar
+/jdk-13.0.2.zip
+/db/h2

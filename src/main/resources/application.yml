@@ -24,7 +24,7 @@ spring:
 
 
 server:
-  port: 8087
+  port: 36792
 
 logging:
   level:
