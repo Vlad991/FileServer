@@ -3,6 +3,9 @@ package com.filesynch.converter;
 import com.filesynch.dto.ClientInfoDTO;
 import com.filesynch.entity.ClientInfo;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class ClientInfoConverter {
     public ClientInfoConverter() {
     }
@@ -35,5 +38,11 @@ public class ClientInfoConverter {
         clientInfo.setSendFrequency(clientInfoDTO.getSendFrequency());
         clientInfo.setAliveRequestFrequency(clientInfoDTO.getAliveRequestFrequency());
         return clientInfo;
+    }
+
+    public List<ClientInfoDTO> convertToListDto(List<ClientInfo> clientInfoList) {
+        return clientInfoList.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 }

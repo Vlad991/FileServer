@@ -8,6 +8,8 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.rmi.RemoteException;
+
 public class TextMessageWebSocket extends TextWebSocketHandler {
     private Server server = Main.server;
 
@@ -26,7 +28,11 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
             server.getClientTextMessageSessionHashMap().put(login, session);
         }
         String messageString = message.getPayload();
-        server.sendTextMessageToServer(login, messageString);
+        try {
+            server.sendTextMessageToServer(login, messageString);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

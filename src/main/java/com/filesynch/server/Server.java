@@ -5,12 +5,11 @@ import com.filesynch.Main;
 import com.filesynch.converter.*;
 import com.filesynch.dto.*;
 import com.filesynch.entity.*;
-import com.filesynch.gui.NewClient;
 import com.filesynch.repository.*;
+import com.filesynch.rmi.ServerGuiInt;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.swing.*;
@@ -21,13 +20,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.rmi.RemoteException;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 public class Server {
+    @Getter
+    @Setter
+    private ServerGuiInt serverGui;
     @Getter
     @Setter
     private ServerStatus serverStatus;
@@ -49,7 +54,7 @@ public class Server {
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
-    private final int FILE_PART_SIZE = 1024*5; // in bytes (100 kB)
+    private final int FILE_PART_SIZE = 1024 * 5; // in bytes (100 kB)
     public static final String slash = File.separator;
     //public final String FILE_INPUT_DIRECTORY = "input_files" + slash;
     public final String FILE_OUTPUT_DIRECTORY = "output_files" + slash;
@@ -67,8 +72,6 @@ public class Server {
     private HashMap<String, WebSocketSession> clientFileStatusSessionHashMap = new HashMap<>();
     @Getter
     private HashMap<String, WebSocketSession> clientLoadFileSessionHashMap = new HashMap<>();
-    @Setter
-    private JProgressBar fileProgressBar;
     private ObjectMapper mapper = new ObjectMapper();
     //public HashMap<String, HashMap<String, ArrayList<FilePartDTO>>> filePartHashMap;
     public HashMap<String, ClientInfoDTO> queueNew;
@@ -99,51 +102,50 @@ public class Server {
         queueFileInfo = new HashMap<>();
         queueFiles = new HashMap<>();
         queueFileParts = new HashMap<>();
+        serverGui = Main.serverGui;
     }
 
-    public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) {
+    public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) throws RemoteException {
         if (clientIsRegistered(clientInfoDTO.getLogin())) {
             clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
             queueNew.remove(clientInfoDTO.getName());
-            Main.updateQueueTable();
+            serverGui.updateQueueTable();
             return updateClientInfo(clientInfoDTO);
         }
         queueNew.put(clientInfoDTO.getName(), clientInfoDTO);
-        Main.updateQueueTable();
+
+        serverGui.updateQueueTable();
+
         Logger.log(clientInfoDTO.toString());
         clientInfoDTO.setStatus(ClientStatus.NEW);
         ClientInfo clientInfo = clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
         String login = null;
-        NewClient newClient = new NewClient();
-        JFrame newClientFrame = Main.showNewClientIcon(clientInfoDTO, newClient);
-        synchronized (clientInfoDTO) {
-            try {
-                clientInfoDTO.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        login = newClient.getJTextFieldLogin().getText();
+
+        clientInfoDTO = serverGui.showNewClientIcon(clientInfoDTO);
+
+        login = clientInfoDTO.getLogin();
         clientInfo.setLogin(login);
-        clientInfo.setFilesFolder(newClient.getJTextFieldFilesFolder().getText());
-        clientInfo.setSendFrequency(Integer.parseInt(newClient.getJTextFieldSendFrequency().getText()));
-        clientInfo.setAliveRequestFrequency(Integer.parseInt(newClient.getJTextFieldAliveRequestFrequency().getText()));
+        clientInfo.setFilesFolder(clientInfoDTO.getFilesFolder());
+        clientInfo.setSendFrequency(clientInfoDTO.getSendFrequency());
+        clientInfo.setAliveRequestFrequency(clientInfoDTO.getAliveRequestFrequency());
         clientInfo.setStatus(ClientStatus.CLIENT_FIRST);
         clientInfoRepository.save(clientInfo);
         clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
-        Main.hideNewClientIcon(newClientFrame);
+
+        serverGui.hideNewClientIcon(login);
+
         loginSessionHashMap.put(login, clientInfoDTO);
-        Main.updateClientList();
+        serverGui.updateClientList();
         File directory = new File(clientInfoDTO.getFilesFolder());
         if (!directory.exists()) {
             directory.mkdir();
         }
         queueNew.remove(clientInfo.getName());
-        Main.updateQueueTable();
+        serverGui.updateQueueTable();
         return clientInfoDTO;
     }
 
-    public boolean loginToServer(String login) {
+    public boolean loginToServer(String login) throws RemoteException {
         if (!clientIsRegistered(login)) {
             return false;
         }
@@ -153,7 +155,7 @@ public class Server {
         clientInfoRepository.save(clientInfo);
         ClientInfoDTO clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
         loginSessionHashMap.put(login, clientInfoDTO);
-        Main.updateClientList();
+        serverGui.updateClientList();
         File directory = new File(clientInfoDTO.getFilesFolder());
         if (!directory.exists()) {
             directory.mkdir();
@@ -167,7 +169,7 @@ public class Server {
         loginSessionHashMap.remove(login);
     }
 
-    public void sendTextMessageToServer(String login, String message) {
+    public void sendTextMessageToServer(String login, String message) throws RemoteException {
         if (clientIsLoggedIn(login)) {
             TextMessage textMessage = new TextMessage();
             textMessage.setMessage(message);
@@ -175,13 +177,13 @@ public class Server {
             textMessageRepository.save(textMessage);
             Logger.log(login + ": " + textMessage.getMessage());
             queueTechnical.add(message);
-            Main.updateFileQueue();
+            serverGui.updateFileQueue();
         } else {
             System.out.println(message);
         }
     }
 
-    public boolean sendFileInfoToServer(String login, FileInfoDTO fileInfoDTO) {
+    public boolean sendFileInfoToServer(String login, FileInfoDTO fileInfoDTO) throws RemoteException {
         if (clientIsLoggedIn(login)) {
             HashMap<String, ArrayList<FilePartDTO>> fileHashMap = new HashMap<>();
             fileHashMap.put(fileInfoDTO.getName(), new ArrayList<>());
@@ -212,7 +214,7 @@ public class Server {
             }
             Logger.log(fileInfoDTO.toString());
             queueFileInfo.put(fileInfoDTO.getHash(), fileInfoDTO);
-            Main.updateFileQueue();
+            serverGui.updateFileQueue();
             return true;
         } else {
             return false;
@@ -334,7 +336,7 @@ public class Server {
         }
     }
 
-    public boolean sendTextMessageToClient(String login, String message) {
+    public boolean sendTextMessageToClient(String login, String message) throws RemoteException {
         setServerStatus(ServerStatus.SERVER_WORK);
         WebSocketSession clientTextMessageSession = clientTextMessageSessionHashMap.get(login);
         if (clientTextMessageSession == null) {
@@ -349,7 +351,7 @@ public class Server {
         }
         Logger.log("message sent to : " + login);
         queueTechnical.add(message);
-        Main.updateFileQueue();
+        serverGui.updateFileQueue();
         return true;
     }
 
@@ -580,8 +582,8 @@ public class Server {
         return clientInfoDTO;
     }
 
-    public List<ClientInfo> getClientInfoDTOList() {
-        return clientInfoRepository.findAll();
+    public List<ClientInfoDTO> getClientInfoDTOList() {
+        return clientInfoConverter.convertToListDto(clientInfoRepository.findAll());
     }
 
     public ClientInfoDTO updateClientInfo(ClientInfoDTO clientInfoDTO) {

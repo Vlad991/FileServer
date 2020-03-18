@@ -1,19 +1,22 @@
 package com.filesynch.server;
 
+import com.filesynch.rmi.ServerGuiInt;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.swing.*;
+import java.rmi.RemoteException;
 
 @Slf4j
 public class Logger {
-    public static JTextArea logArea;
+    public static ServerGuiInt serverGuiInt;
 
     public synchronized static void log(String stringToLog) {
         String COLOR = "\033[0;31m";
         String RESET = "\033[0m";
         System.out.println(COLOR + stringToLog + RESET);
-        logArea.append(stringToLog);
-        logArea.append("\n");
-        //log.warn(stringToLog);
+        try {
+            serverGuiInt.log(stringToLog);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 }

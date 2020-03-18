@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.rmi.RemoteException;
 
 @RestController
 @CrossOrigin
@@ -22,7 +23,12 @@ public class AuthorizationController {
 
     @PostMapping(value = "/register")
     public ClientInfoDTO register(@RequestBody ClientInfoDTO clientInfoDTO) {
-        return server.registerToServer(clientInfoDTO);
+        try {
+            return server.registerToServer(clientInfoDTO);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @PostMapping(value = "/login")
