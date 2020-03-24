@@ -36,6 +36,15 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
     }
 
     @Override
+    public String getServerStatus() throws RemoteException {
+        if (server != null && server.getServerStatus() == ServerStatus.SERVER_WORK) {
+            return String.valueOf(port);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
     public void connectGuiToServer(ServerGuiInt serverGuiInt) {
         this.serverGui = serverGuiInt;
         Logger.serverGuiInt = serverGuiInt;
@@ -48,6 +57,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
             try {
                 ctx = SpringApplication.run(Main.class, stringArgs);
                 server = ctx.getBean(com.filesynch.server.Server.class);
+                Main.server = server;
                 //server.filePartHashMap = new HashMap<>();
 //                server.queueNew = new HashMap<>();
 //                server.queueTechnical = new ArrayList<>();

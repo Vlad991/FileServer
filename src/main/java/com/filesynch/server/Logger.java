@@ -16,7 +16,7 @@ public class Logger {
         try {
             serverGuiInt.log(stringToLog);
         } catch (RemoteException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 }

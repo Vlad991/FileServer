@@ -1,13 +1,13 @@
 package com.filesynch.configuration;
 
 import com.filesynch.server.interceptor.ClientSecurityInterceptor;
+import com.filesynch.server.interceptor.RegistrationInterceptor;
 import com.filesynch.server.websocket.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 @Configuration
 @EnableWebSocket
@@ -15,6 +15,9 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(registrationWebSocket(), "/register")
+                .addInterceptors(new RegistrationInterceptor())
+                .setAllowedOrigins("*");
         registry.addHandler(textMessageWebSocket(), "/text")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
@@ -36,32 +39,37 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
     }
 
     @Bean
-    public TextMessageWebSocket textMessageWebSocket(){
+    public RegistrationWebSocket registrationWebSocket() {
+        return new RegistrationWebSocket();
+    }
+
+    @Bean
+    public TextMessageWebSocket textMessageWebSocket() {
         return new TextMessageWebSocket();
     }
 
     @Bean
-    public FilePartWebSocket filePartWebSocket(){
+    public FilePartWebSocket filePartWebSocket() {
         return new FilePartWebSocket();
     }
 
     @Bean
-    public FileInfoWebSocket fileInfoWebSocket(){
+    public FileInfoWebSocket fileInfoWebSocket() {
         return new FileInfoWebSocket();
     }
 
     @Bean
-    public FilePartStatusWebSocket filePartStatusWebSocket(){
+    public FilePartStatusWebSocket filePartStatusWebSocket() {
         return new FilePartStatusWebSocket();
     }
 
     @Bean
-    public FileStatusWebSocket fileStatusWebSocket(){
+    public FileStatusWebSocket fileStatusWebSocket() {
         return new FileStatusWebSocket();
     }
 
     @Bean
-    public LoadFileWebSocket loadFileWebSocket(){
+    public LoadFileWebSocket loadFileWebSocket() {
         return new LoadFileWebSocket();
     }
 }

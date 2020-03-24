@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public interface ServerRmiInt extends Remote {
+    public String getServerStatus() throws RemoteException;
+
     public void connectGuiToServer(ServerGuiInt serverGuiInt) throws RemoteException;
 
     public int startServer() throws RemoteException;

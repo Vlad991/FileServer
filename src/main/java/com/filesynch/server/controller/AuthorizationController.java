@@ -21,16 +21,6 @@ public class AuthorizationController {
         this.server = server;
     }
 
-    @PostMapping(value = "/register")
-    public ClientInfoDTO register(@RequestBody ClientInfoDTO clientInfoDTO) {
-        try {
-            return server.registerToServer(clientInfoDTO);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     @PostMapping(value = "/login")
     public ResponseEntity login(@RequestBody String login) {
         boolean result = false;

@@ -54,10 +54,13 @@ public class Server {
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
     public static final String CLIENT_LOGIN = "client_login";
+    public static final String CLIENT_NAME = "client_name";
     private final int FILE_PART_SIZE = 1024 * 5; // in bytes (100 kB)
     public static final String slash = File.separator;
     //public final String FILE_INPUT_DIRECTORY = "input_files" + slash;
     public final String FILE_OUTPUT_DIRECTORY = "output_files" + slash;
+    @Getter
+    private HashMap<String, WebSocketSession> registrationSessionHashMap = new HashMap<>();
     @Getter
     private HashMap<String, ClientInfoDTO> loginSessionHashMap = new HashMap<>();
     @Getter
@@ -142,6 +145,14 @@ public class Server {
         }
         queueNew.remove(clientInfo.getName());
         serverGui.updateQueueTable();
+        WebSocketSession registrationSession = registrationSessionHashMap.get(clientInfoDTO.getName());
+        try {
+            registrationSession
+                    .sendMessage(
+                            new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(clientInfoDTO)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return clientInfoDTO;
     }
 
@@ -177,7 +188,6 @@ public class Server {
             textMessageRepository.save(textMessage);
             Logger.log(login + ": " + textMessage.getMessage());
             queueTechnical.add(message);
-            serverGui.updateFileQueue();
         } else {
             System.out.println(message);
         }
