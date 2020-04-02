@@ -2,6 +2,7 @@ package com.filesynch.server.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filesynch.Main;
+import com.filesynch.async.AsyncService;
 import com.filesynch.dto.FilePartDTO;
 import com.filesynch.server.Logger;
 import com.filesynch.server.Server;
@@ -15,6 +16,7 @@ import java.io.IOException;
 public class FilePartStatusWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
     private Server server = Main.server;
+    private AsyncService asyncService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -33,7 +35,11 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            server.sendFilePartStatusToServer(login, filePartDTO);
+            if (server.sendFilePartStatusToServer(login, filePartDTO)) {
+                asyncService.notifyHandler(filePartDTO, true);
+            } else {
+                asyncService.notifyHandler(filePartDTO, false);
+            }
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }

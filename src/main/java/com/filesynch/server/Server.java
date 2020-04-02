@@ -140,8 +140,12 @@ public class Server {
         loginSessionHashMap.put(login, clientInfoDTO);
         serverGui.updateClientList();
         File directory = new File(clientInfoDTO.getFilesFolder());
+        File partsDirectory = new File(clientInfoDTO.getFilesFolder() + "parts" + slash);
         if (!directory.exists()) {
             directory.mkdir();
+        }
+        if (!partsDirectory.exists()) {
+            partsDirectory.mkdir();
         }
         queueNew.remove(clientInfo.getName());
         serverGui.updateQueueTable();
@@ -168,8 +172,12 @@ public class Server {
         loginSessionHashMap.put(login, clientInfoDTO);
         serverGui.updateClientList();
         File directory = new File(clientInfoDTO.getFilesFolder());
+        File partsDirectory = new File(clientInfoDTO.getFilesFolder() + "parts" + slash);
         if (!directory.exists()) {
             directory.mkdir();
+        }
+        if (!partsDirectory.exists()) {
+            partsDirectory.mkdir();
         }
         return true;
     }
@@ -280,7 +288,7 @@ public class Server {
     private String loadFilePart(String login, FilePartDTO filePartDTO) throws IOException {
         File file =
                 new File(
-                        loginSessionHashMap.get(login).getFilesFolder()
+                        loginSessionHashMap.get(login).getFilesFolder() + "parts" + slash
                                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[0]
                                 + "__" + filePartDTO.getOrder() + "."
                                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[1]);
@@ -292,7 +300,7 @@ public class Server {
         out.write(filePartDTO.getData(), 0, filePartDTO.getLength());
         out.flush();
         out.close();
-        return getFileHash(loginSessionHashMap.get(login).getFilesFolder()
+        return getFileHash(loginSessionHashMap.get(login).getFilesFolder() + "parts" + slash
                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[0]
                 + "__" + filePartDTO.getOrder() + "."
                 + filePartDTO.getFileInfoDTO().getName().split("\\.")[1]);
@@ -307,7 +315,7 @@ public class Server {
         FileOutputStream out = new FileOutputStream(file, true);
         for (int i = 1; i <= fileInfoDTO.getPartsQuantity(); i++) {
             FileInputStream in = new FileInputStream(
-                    loginSessionHashMap.get(login).getFilesFolder()
+                    loginSessionHashMap.get(login).getFilesFolder() + "parts" + slash
                             + fileInfoDTO.getName().split("\\.")[0]
                             + "__" + i + "."
                             + fileInfoDTO.getName().split("\\.")[1]);
