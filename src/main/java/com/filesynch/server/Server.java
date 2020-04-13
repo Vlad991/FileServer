@@ -7,12 +7,12 @@ import com.filesynch.dto.*;
 import com.filesynch.entity.*;
 import com.filesynch.repository.*;
 import com.filesynch.rmi.ServerGuiInt;
+import com.filesynch.async.AsyncService;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import javax.swing.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -53,6 +53,9 @@ public class Server {
     @Getter
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
+    @Setter
+    @Getter
+    private AsyncService asyncService;
     public static final String CLIENT_LOGIN = "client_login";
     public static final String CLIENT_NAME = "client_name";
     private final int FILE_PART_SIZE = 1024 * 5; // in bytes (100 kB)
@@ -84,7 +87,12 @@ public class Server {
     public HashMap<String, FileInfoDTO> queueFiles;
     public HashMap<String, FilePartDTO> queueFileParts;
 
-    public Server(ClientInfoRepository clientInfoRepository, FileInfoReceivedRepository fileInfoReceivedRepository, FileInfoSentRepository fileInfoSentRepository, FilePartReceivedRepository filePartReceivedRepository, FilePartSentRepository filePartSentRepository, TextMessageRepository textMessageRepository) {
+    public Server(ClientInfoRepository clientInfoRepository,
+                  FileInfoReceivedRepository fileInfoReceivedRepository,
+                  FileInfoSentRepository fileInfoSentRepository,
+                  FilePartReceivedRepository filePartReceivedRepository,
+                  FilePartSentRepository filePartSentRepository,
+                  TextMessageRepository textMessageRepository) {
         clientInfoConverter = new ClientInfoConverter();
         fileInfoReceivedConverter = new FileInfoReceivedConverter(clientInfoConverter);
         fileInfoSentConverter = new FileInfoSentConverter(clientInfoConverter);
@@ -385,7 +393,7 @@ public class Server {
             for (String filePath : filePathNames) {
                 while (!sendFileToClient(login, filePath.replace(FILE_OUTPUT_DIRECTORY, ""))) {
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(25000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -492,38 +500,27 @@ public class Server {
         //queueFiles.put(fileInfoDTO.getHash(), fileInfoDTO);
         //Main.updateFileQueue();
         //Logger.log("File with hash: " + fileInfoDTO.getHash() + " sent");
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        List<FilePartSent> filePartsWait = filePartSentRepository
-                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
-        List<FilePartSent> filePartsNotSent = filePartSentRepository
-                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
-        if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
-            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
-            try {
-                clientLoadFileSessionHashMap.get(login).sendMessage(
-                        new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO))
-                );
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return true;
-        }
-        return false;
+//        List<FilePartSent> filePartsWait = filePartSentRepository
+//                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
+//        List<FilePartSent> filePartsNotSent = filePartSentRepository
+//                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
+//        if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
+//            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
+//            try {
+//                clientLoadFileSessionHashMap.get(login).sendMessage(
+//                        new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO))
+//                );
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            return true;
+//        }
+//        return false;
+        return true;
     }
 
     public boolean sendFilePartToClient(FilePartDTO filePartDTO, WebSocketSession clientFilePartSession) {
-        try {
-            clientFilePartSession.
-                    sendMessage(
-                            new org.springframework.web.socket.TextMessage(
-                                    mapper.writeValueAsString(filePartDTO)));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        asyncService.addFilePartToHandling(filePartDTO, clientFilePartSession);
         return true;
     }
 

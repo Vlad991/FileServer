@@ -21,6 +21,7 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         server = Main.server;
+        asyncService = server.getAsyncService();
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartStatusSessionHashMap().put(login, session);
         Logger.log("/file-part-status/" + login + ": connected");
