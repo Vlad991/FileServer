@@ -1,36 +1,45 @@
 package com.filesynch.async;
 
+import com.filesynch.dto.FileInfoDTO;
 import com.filesynch.dto.FilePartDTO;
+import com.filesynch.dto.TextMessageDTO;
+import com.filesynch.server.Logger;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ExecutorService;
 
 @Service
 public class HandlerService {
-    private Stack<Handler> textMessageHandlerStack;
-    private Stack<Handler> fileInfoHandlerStack;
+    private LinkedHashMap<TextMessageDTO, Handler> textMessageHandlerStack;
+    private LinkedHashMap<FileInfoDTO, Handler> fileInfoHandlerStack;
     @Getter
-    private Stack<Handler> filePartHandlerStack;
+    private LinkedHashMap<FilePartDTO, Handler> filePartHandlerStack;
     public final int FILE_PART_HANDLER_COUNT = 7;
-    private Stack<Handler> commandHandlerStack;
+    private LinkedHashMap<TextMessageDTO, Handler> commandHandlerStack;
 
     public HandlerService() {
-        this.textMessageHandlerStack = new Stack<>();
-        this.fileInfoHandlerStack = new Stack<>();
-        this.filePartHandlerStack = new Stack<>();
-        this.commandHandlerStack = new Stack<>();
+        this.textMessageHandlerStack = new LinkedHashMap<>();
+        this.fileInfoHandlerStack = new LinkedHashMap<>();
+        this.filePartHandlerStack = new LinkedHashMap<>();
+        this.commandHandlerStack = new LinkedHashMap<>();
     }
 
-    public synchronized Handler getFilePartHandler(ExecutorService threadPool, WebSocketSession session) throws InterruptedException {
+    public synchronized Handler getFilePartHandler(ExecutorService threadPool,
+                                                   WebSocketSession session,
+                                                   FilePartDTO filePartDTO) throws InterruptedException {
         Handler handler = null;
         if (filePartHandlerStack.size() == FILE_PART_HANDLER_COUNT) {
             while (handler == null) {
-                for (Handler h : filePartHandlerStack) {
-                    if (!h.isBusy()) {
-                        handler = h;
+                for (Map.Entry<FilePartDTO, Handler> entry : filePartHandlerStack.entrySet()) {
+                    if (!entry.getValue().isBusy()) {
+                        handler = entry.getValue();
+                        filePartHandlerStack.remove(entry.getKey());
+                        filePartHandlerStack.put(filePartDTO, handler);
                         break;
                     }
                 }
@@ -40,8 +49,9 @@ public class HandlerService {
             }
         } else {
             handler = new Handler(threadPool);
-            filePartHandlerStack.push(handler);
+            filePartHandlerStack.put(filePartDTO, handler);
         }
+        handler.setBusy(true);
         handler.setSocketSession(session);
         return handler;
     }
@@ -51,11 +61,10 @@ public class HandlerService {
         notify();
     }
 
-    public Handler getHandlerByFilePart(FilePartDTO filePartDTO) {
-        for (Handler handler : filePartHandlerStack) {
-            FilePartDTO filePartDTO1 = (FilePartDTO) handler.getObjectToSend();
-            if ((filePartDTO.getHashKey().equals(filePartDTO1.getHashKey())) && (filePartDTO.getFileInfoDTO().getName().equals(filePartDTO1.getFileInfoDTO().getName()))) {
-                return handler;
+    public synchronized Handler getHandlerByFilePart(FilePartDTO filePartDTO) {
+        for (Map.Entry<FilePartDTO, Handler> entry : filePartHandlerStack.entrySet()) {
+            if ((filePartDTO.getHashKey().equals(entry.getKey().getHashKey())) && (filePartDTO.getFileInfoDTO().getName().equals(entry.getKey().getFileInfoDTO().getName()))) {
+                return entry.getValue();
             }
         }
         return null;

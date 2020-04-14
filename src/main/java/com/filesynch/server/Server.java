@@ -342,7 +342,7 @@ public class Server {
         sendFileStatusToClient(login, fileInfoDTO);
     }
 
-    private void sendFileStatusToClient(String login, FileInfoDTO fileInfoDTO) {
+    public void sendFileStatusToClient(String login, FileInfoDTO fileInfoDTO) {
         WebSocketSession session = clientFileStatusSessionHashMap.get(login);
         try {
             session.sendMessage(new org.springframework.web.socket.TextMessage(
@@ -355,8 +355,11 @@ public class Server {
     private void sendFilePartStatusToClient(String login, FilePartDTO filePartDTO) {
         WebSocketSession session = clientFilePartStatusSessionHashMap.get(login);
         try {
-            session.sendMessage(new org.springframework.web.socket.TextMessage(
-                    mapper.writeValueAsString(filePartDTO)));
+            synchronized (session) {
+                session
+                        .sendMessage(new org.springframework.web.socket.TextMessage(
+                                mapper.writeValueAsString(filePartDTO)));
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -499,29 +502,32 @@ public class Server {
         }
         //queueFiles.put(fileInfoDTO.getHash(), fileInfoDTO);
         //Main.updateFileQueue();
-        //Logger.log("File with hash: " + fileInfoDTO.getHash() + " sent");
-//        List<FilePartSent> filePartsWait = filePartSentRepository
-//                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
-//        List<FilePartSent> filePartsNotSent = filePartSentRepository
-//                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
-//        if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
-//            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
-//            try {
-//                clientLoadFileSessionHashMap.get(login).sendMessage(
-//                        new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO))
-//                );
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            return true;
-//        }
-//        return false;
         return true;
     }
 
     public boolean sendFilePartToClient(FilePartDTO filePartDTO, WebSocketSession clientFilePartSession) {
         asyncService.addFilePartToHandling(filePartDTO, clientFilePartSession);
         return true;
+    }
+
+    public boolean sayClientToLoadFile(String login, FileInfoDTO fileInfoDTO) {
+        FileInfoSent fileInfo = fileInfoSentRepository.findByHashAndName(fileInfoDTO.getHash(), fileInfoDTO.getName());
+        List<FilePartSent> filePartsWait = filePartSentRepository
+                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.WAIT);
+        List<FilePartSent> filePartsNotSent = filePartSentRepository
+                .findAllByFileInfoAndStatus(fileInfo, FilePartStatus.NOT_SENT);
+        if (filePartsWait.size() == 0 && filePartsNotSent.size() == 0) {
+            fileInfoDTO.setFileStatus(FileStatus.TRANSFERRED);
+            try {
+                clientLoadFileSessionHashMap.get(login).sendMessage(
+                        new org.springframework.web.socket.TextMessage(mapper.writeValueAsString(fileInfoDTO))
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+        return false;
     }
 
     public String getFileHash(String filePathname) {

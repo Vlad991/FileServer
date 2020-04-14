@@ -6,6 +6,7 @@ import com.filesynch.async.AsyncService;
 import com.filesynch.dto.FilePartDTO;
 import com.filesynch.server.Logger;
 import com.filesynch.server.Server;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -36,7 +37,8 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            if (server.sendFilePartStatusToServer(login, filePartDTO)) {
+            boolean result = server.sendFilePartStatusToServer(login, filePartDTO);
+            if (result) {
                 asyncService.notifyHandler(filePartDTO, true);
             } else {
                 asyncService.notifyHandler(filePartDTO, false);
@@ -50,7 +52,7 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartStatusSessionHashMap().remove(login);
-        Logger.log("/file-part-status/" + login + ": disconnected");
+        Logger.log("/file-part-status/" + login + ": disconnected(" + status + ")");
         super.afterConnectionClosed(session, status);
     }
 }

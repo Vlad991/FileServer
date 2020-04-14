@@ -36,9 +36,9 @@ public class FileStatusWebSocket extends TextWebSocketHandler {
             String jsonString = message.getPayload();
             FileInfoDTO fileInfoDTO = mapper.readValue(jsonString, FileInfoDTO.class);
             if (fileInfoDTO.getFileStatus() == FileStatus.TRANSFERRED) {
-                Logger.log("File with hash: " + fileInfoDTO.getHash() + " SENT");
+                Logger.logGreen("File with hash: " + fileInfoDTO.getHash() + " SENT");
             } else {
-                Logger.log("File with hash: " + fileInfoDTO.getHash() + " NOT SENT");
+                Logger.logRed("File with hash: " + fileInfoDTO.getHash() + " NOT SENT");
             }
             FileInfoSent fileInfo = server.getFileInfoSentRepository().findByHashAndName(fileInfoDTO.getHash(),
                     fileInfoDTO.getName());
