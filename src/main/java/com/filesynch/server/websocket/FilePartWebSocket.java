@@ -11,6 +11,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,15 +19,21 @@ import java.util.concurrent.Executors;
 public class FilePartWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
     private Server server = Main.server;
-    private ExecutorService handlerThreadPool;
+    private HashMap<String, ExecutorService> handlerThreadPoolHashMap;
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(WebSocketSession session) {
         server = Main.server;
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartSessionHashMap().put(login, session);
         Logger.log("/file-part/" + login + ": connected");
-        handlerThreadPool = Executors.newFixedThreadPool(server.getAsyncService().getHandlerService().FILE_PART_HANDLER_COUNT);
+        if (handlerThreadPoolHashMap == null) {
+            handlerThreadPoolHashMap = new HashMap<>();
+        }
+        handlerThreadPoolHashMap
+                .put(login,
+                Executors.newFixedThreadPool(server.getAsyncServiceHashMap().get(login).getHandlerService().FILE_PART_HANDLER_COUNT));
+        Logger.log(String.valueOf(session.getTextMessageSizeLimit()));
     }
 
     @Override
@@ -37,8 +44,6 @@ public class FilePartWebSocket extends TextWebSocketHandler {
         }
         CompletableFuture.runAsync(() -> {
             try {
-                Logger.log("sleep 5 sec");
-                Thread.sleep(5000);
                 String jsonString = message.getPayload();
                 FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
                 server.sendFilePartToServer(login, filePartDTO);
@@ -46,7 +51,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
                 e.printStackTrace();
                 Logger.log(e.getMessage());
             }
-        }, handlerThreadPool);
+        }, handlerThreadPoolHashMap.get(login));
     }
 
     @Override

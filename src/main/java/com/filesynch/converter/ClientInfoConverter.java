@@ -19,7 +19,12 @@ public class ClientInfoConverter {
         clientInfoDTO.setPcName(clientInfo.getPcName());
         clientInfoDTO.setPcModel(clientInfo.getPcModel());
         clientInfoDTO.setStatus(clientInfo.getStatus());
-        clientInfoDTO.setFilesFolder(clientInfo.getFilesFolder());
+        clientInfoDTO.setFilePartSize(clientInfo.getFilePartSize());
+        clientInfoDTO.setOutputFilesFolder(clientInfo.getOutputFilesFolder());
+        clientInfoDTO.setInputFilesFolder(clientInfo.getInputFilesFolder());
+        clientInfoDTO.setHandlersCount(clientInfo.getHandlersCount());
+        clientInfoDTO.setHandlerTimeout(clientInfo.getHandlerTimeout());
+        clientInfoDTO.setThreadsCount(clientInfo.getThreadsCount());
         clientInfoDTO.setSendFrequency(clientInfo.getSendFrequency());
         clientInfoDTO.setAliveRequestFrequency(clientInfo.getAliveRequestFrequency());
         return clientInfoDTO;
@@ -34,7 +39,12 @@ public class ClientInfoConverter {
         clientInfo.setPcName(clientInfoDTO.getPcName());
         clientInfo.setPcModel(clientInfoDTO.getPcModel());
         clientInfo.setStatus(clientInfoDTO.getStatus());
-        clientInfo.setFilesFolder(clientInfoDTO.getFilesFolder());
+        clientInfo.setFilePartSize(clientInfoDTO.getFilePartSize());
+        clientInfo.setOutputFilesFolder(clientInfoDTO.getOutputFilesFolder());
+        clientInfo.setInputFilesFolder(clientInfoDTO.getInputFilesFolder());
+        clientInfo.setHandlersCount(clientInfoDTO.getHandlersCount());
+        clientInfo.setHandlerTimeout(clientInfoDTO.getHandlerTimeout());
+        clientInfo.setThreadsCount(clientInfoDTO.getThreadsCount());
         clientInfo.setSendFrequency(clientInfoDTO.getSendFrequency());
         clientInfo.setAliveRequestFrequency(clientInfoDTO.getAliveRequestFrequency());
         return clientInfo;

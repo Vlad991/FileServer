@@ -35,7 +35,7 @@ public class RegistrationWebSocket extends TextWebSocketHandler {
             ClientInfoDTO clientInfoDTO = mapper.readValue(jsonString, ClientInfoDTO.class);
             server.registerToServer(clientInfoDTO);
         } catch (IOException e) {
-            Logger.log(e.getMessage());
+            e.printStackTrace();
         }
     }
 

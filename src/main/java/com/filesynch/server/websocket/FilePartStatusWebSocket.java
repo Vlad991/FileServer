@@ -13,17 +13,22 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
 
 public class FilePartStatusWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
     private Server server = Main.server;
-    private AsyncService asyncService;
+    private HashMap<String, AsyncService> asyncServiceHashMap;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         server = Main.server;
-        asyncService = server.getAsyncService();
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
+        if (asyncServiceHashMap == null) {
+            asyncServiceHashMap = new HashMap<>();
+        }
+        asyncServiceHashMap.put(login, server.getAsyncServiceHashMap().get(login));
         server.getClientFilePartStatusSessionHashMap().put(login, session);
         Logger.log("/file-part-status/" + login + ": connected");
     }
@@ -39,9 +44,9 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
             boolean result = server.sendFilePartStatusToServer(login, filePartDTO);
             if (result) {
-                asyncService.notifyHandler(filePartDTO, true);
+                asyncServiceHashMap.get(login).notifyHandler(filePartDTO, true);
             } else {
-                asyncService.notifyHandler(filePartDTO, false);
+                asyncServiceHashMap.get(login).notifyHandler(filePartDTO, false);
             }
         } catch (IOException e) {
             Logger.log(e.getMessage());

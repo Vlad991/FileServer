@@ -10,26 +10,23 @@ import org.springframework.web.socket.WebSocketSession;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Service
 public class AsyncService {
     private ExecutorService handlerThreadPool;
     private ExecutorService threadPool;
     @Getter
     private HandlerService handlerService;
-    public final int THREADS_COUNT = 3;
     private BlockingQueue<FilePartDTO> filePartDTOQueue;
     private BlockingQueue<WebSocketSession> sessionQueue;
     private Server server;
     private boolean isRunning;
 
-    public AsyncService(HandlerService handlerService, Server server) {
+    public AsyncService(HandlerService handlerService, Server server, int threadsCount) {
         this.handlerThreadPool = Executors.newFixedThreadPool(handlerService.FILE_PART_HANDLER_COUNT);
-        this.threadPool = Executors.newFixedThreadPool(THREADS_COUNT);
+        this.threadPool = Executors.newFixedThreadPool(threadsCount);
         this.handlerService = handlerService;
         this.filePartDTOQueue = new LinkedBlockingQueue<>();
         this.sessionQueue = new LinkedBlockingQueue<>();
         this.server = server;
-        server.setAsyncService(this);
     }
 
     public synchronized void addFilePartToHandling(FilePartDTO filePartDTO, WebSocketSession session) {

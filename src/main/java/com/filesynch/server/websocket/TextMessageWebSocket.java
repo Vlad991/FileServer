@@ -28,11 +28,8 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
             server.getClientTextMessageSessionHashMap().put(login, session);
         }
         String messageString = message.getPayload();
-        try {
-            server.sendTextMessageToServer(login, messageString);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        server.sendTextMessageToServer(login, messageString);
+
     }
 
     @Override

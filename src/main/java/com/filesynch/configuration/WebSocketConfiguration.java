@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 @Configuration
@@ -37,6 +38,15 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
         registry.addHandler(loadFileWebSocket(), "/load-file")
                 .addInterceptors(new ClientSecurityInterceptor())
                 .setAllowedOrigins("*");
+    }
+
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        container.setMaxTextMessageBufferSize(102400000);
+        //container.setMaxBinaryMessageBufferSize(10240);
+        container.setMaxSessionIdleTimeout(1000L * 60 * 60);
+        return container;
     }
 
     @Bean

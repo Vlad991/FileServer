@@ -16,21 +16,22 @@ import java.util.concurrent.ExecutorService;
 @Getter
 @Setter
 public class Handler {
-    private final int TIMEOUT = 10 * 1000;
     private WebSocketSession socketSession;
     private Object objectToSend;
     private boolean objectIsSent;
     private boolean isBusy;
     private ExecutorService threadPool;
     private ObjectMapper mapper;
+    private int TIMEOUT;
 
     public Handler() {
     }
 
-    public Handler(ExecutorService threadPool) {
+    public Handler(ExecutorService threadPool, int handlerTimeout) {
         this.threadPool = threadPool;
         this.mapper = new ObjectMapper();
         this.isBusy = false;
+        this.TIMEOUT = handlerTimeout;
     }
 
     public boolean sendMessage(Object objectToSend, String filePartName) throws Exception {

@@ -13,16 +13,18 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ExecutorService;
 
-@Service
 public class HandlerService {
     private LinkedHashMap<TextMessageDTO, Handler> textMessageHandlerStack;
     private LinkedHashMap<FileInfoDTO, Handler> fileInfoHandlerStack;
     @Getter
     private LinkedHashMap<FilePartDTO, Handler> filePartHandlerStack;
-    public final int FILE_PART_HANDLER_COUNT = 7;
+    public int FILE_PART_HANDLER_COUNT;
+    private int HANDLER_TIMEOUT;
     private LinkedHashMap<TextMessageDTO, Handler> commandHandlerStack;
 
-    public HandlerService() {
+    public HandlerService(int filePartHandlerCount, int handlerTimeout) {
+        this.FILE_PART_HANDLER_COUNT = filePartHandlerCount;
+        this.HANDLER_TIMEOUT = handlerTimeout;
         this.textMessageHandlerStack = new LinkedHashMap<>();
         this.fileInfoHandlerStack = new LinkedHashMap<>();
         this.filePartHandlerStack = new LinkedHashMap<>();
@@ -48,7 +50,7 @@ public class HandlerService {
                 }
             }
         } else {
-            handler = new Handler(threadPool);
+            handler = new Handler(threadPool, HANDLER_TIMEOUT);
             filePartHandlerStack.put(filePartDTO, handler);
         }
         handler.setBusy(true);
