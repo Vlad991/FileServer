@@ -33,7 +33,7 @@ public class FileInfoWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FileInfoDTO fileInfoDTO = mapper.readValue(jsonString, FileInfoDTO.class);
-            server.sendFileInfoToServer(login, fileInfoDTO);
+            server.saveFileInfo(login, fileInfoDTO);
         } catch (IOException e) {
             Logger.log(e.getMessage());
         }
@@ -43,7 +43,7 @@ public class FileInfoWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFileInfoSessionHashMap().remove(login);
-        Logger.log("/file-info/" + login + ": disconnected");
+        Logger.log("/file-info/" + login + ": disconnected(" + status + ")");
         super.afterConnectionClosed(session, status);
     }
 }

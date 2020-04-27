@@ -2,6 +2,7 @@ package com.filesynch.rmi;
 
 import com.filesynch.Main;
 import com.filesynch.dto.ClientInfoDTO;
+import com.filesynch.dto.ClientStatus;
 import com.filesynch.dto.ServerSettingsDTO;
 import com.filesynch.dto.ServerStatus;
 import com.filesynch.entity.ClientInfo;
@@ -101,6 +102,11 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public void addNewClient(Long id, String login) throws RemoteException {
+        server.addNewClient(id, login);
     }
 
     @Override

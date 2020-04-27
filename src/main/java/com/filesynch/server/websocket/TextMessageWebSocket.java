@@ -8,8 +8,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.rmi.RemoteException;
-
 public class TextMessageWebSocket extends TextWebSocketHandler {
     private Server server = Main.server;
 
@@ -28,7 +26,7 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
             server.getClientTextMessageSessionHashMap().put(login, session);
         }
         String messageString = message.getPayload();
-        server.sendTextMessageToServer(login, messageString);
+        server.saveTextMessage(login, messageString);
 
     }
 
@@ -36,7 +34,7 @@ public class TextMessageWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientTextMessageSessionHashMap().remove(login);
-        Logger.log("/text/" + login + ": disconnected");
+        Logger.log("/text/" + login + ": disconnected(" + status + ")");
         super.afterConnectionClosed(session, status);
     }
 }

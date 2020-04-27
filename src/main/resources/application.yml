@@ -1,20 +1,20 @@
 spring:
   datasource:
-#    username: sa
-#    password:
-#    driverClassName: org.h2.Driver
-#    driverDialect: org.hibernate.dialect.H2Dialect
-#    url: jdbc:h2:file:./db/fs_server
-#    username: SYSDBA
-#    password: masterhost
-#    driverClassName: org.firebirdsql.jdbc.FBDriver
-#    driverDialect: org.hibernate.dialect.FirebirdDialect
-#    url: jdbc:firebirdsql://localhost:3050/C:\Users\admin\Downloads\FileServer\FileServer\db\server.fdb
+    #    username: sa
+    #    password:
+    #    driverClassName: org.h2.Driver
+    #    driverDialect: org.hibernate.dialect.H2Dialect
+    #    url: jdbc:h2:file:./db/fs_server
+    #    username: SYSDBA
+    #    password: masterhost
+    #    driverClassName: org.firebirdsql.jdbc.FBDriver
+    #    driverDialect: org.hibernate.dialect.FirebirdDialect
+    #    url: jdbc:firebirdsql://localhost:3050/C:\Users\admin\Downloads\FileServer\FileServer\db\server.fdb
     username: kzm_vlad
     password: 123root@
     driverClassName: com.mysql.cj.jdbc.Driver
     driverDialect: org.hibernate.dialect.MySQLDialect
-    url: jdbc:mysql://localhost:3306/fs_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/fs_server?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
   jpa:
     hibernate:
       ddl-auto: update

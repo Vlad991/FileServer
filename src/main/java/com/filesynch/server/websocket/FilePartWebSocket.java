@@ -10,7 +10,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -46,7 +45,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
             try {
                 String jsonString = message.getPayload();
                 FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-                server.sendFilePartToServer(login, filePartDTO);
+                server.saveFilePart(login, filePartDTO);
             } catch (Exception e) {
                 e.printStackTrace();
                 Logger.log(e.getMessage());
@@ -58,7 +57,7 @@ public class FilePartWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String login = (String) session.getAttributes().get(Server.CLIENT_LOGIN);
         server.getClientFilePartSessionHashMap().remove(login);
-        Logger.log("/file-part/" + login + ": disconnected");
+        Logger.log("/file-part/" + login + ": disconnected(" + status + ")");
         super.afterConnectionClosed(session, status);
     }
 }

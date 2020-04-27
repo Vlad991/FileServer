@@ -33,7 +33,7 @@ public class RegistrationWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             ClientInfoDTO clientInfoDTO = mapper.readValue(jsonString, ClientInfoDTO.class);
-            server.registerToServer(clientInfoDTO);
+            server.register(clientInfoDTO);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -43,7 +43,7 @@ public class RegistrationWebSocket extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String name = (String) session.getAttributes().get(Server.CLIENT_NAME);
         server.getRegistrationSessionHashMap().remove(name);
-        Logger.log("/register/" + name + ": disconnected");
+        Logger.log("/register/" + name + ": disconnected(" + status + ")");
         super.afterConnectionClosed(session, status);
     }
 }

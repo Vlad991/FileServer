@@ -84,13 +84,6 @@ public class Server {
     @Getter
     private HashMap<String, WebSocketSession> clientLoadFileSessionHashMap = new HashMap<>();
     private ObjectMapper mapper = new ObjectMapper();
-    //public HashMap<String, HashMap<String, ArrayList<FilePartDTO>>> filePartHashMap;
-    public HashMap<String, ClientInfoDTO> queueNew;
-    public List<String> queueTechnical;
-    public HashMap<String, ClientInfoDTO> queueAlive;
-    public HashMap<String, FileInfoDTO> queueFileInfo;
-    public HashMap<String, FileInfoDTO> queueFiles;
-    public HashMap<String, FilePartDTO> queueFileParts;
 
     public Server(ClientInfoRepository clientInfoRepository,
                   FileInfoReceivedRepository fileInfoReceivedRepository,
@@ -114,56 +107,40 @@ public class Server {
         this.filePartSentRepository = filePartSentRepository;
         this.textMessageRepository = textMessageRepository;
         this.serverSettingsRepository = serverSettingsRepository;
-        //filePartHashMap = new HashMap<>();
-        queueNew = new HashMap<>();
-        queueTechnical = new ArrayList<>();
-        queueAlive = new HashMap<>();
-        queueFileInfo = new HashMap<>();
-        queueFiles = new HashMap<>();
-        queueFileParts = new HashMap<>();
         serverGui = Main.serverGui;
         this.serverSettings = serverSettingsRepository.findById(1L).isPresent() ?
                 serverSettingsRepository.findById(1L).get() : null;
         this.asyncServiceHashMap = new HashMap<>();
     }
 
-    public ClientInfoDTO registerToServer(ClientInfoDTO clientInfoDTO) throws RemoteException {
+    public ClientInfoDTO register(ClientInfoDTO clientInfoDTO) throws RemoteException {
         if (clientIsRegistered(clientInfoDTO.getLogin())) {
-            clientInfoDTO.setStatus(ClientStatus.CLIENT_FIRST);
-            queueNew.remove(clientInfoDTO.getName());
+            clientInfoDTO.setStatus(ClientStatus.CLIENT_WORK);
             serverGui.updateQueueTable();
             return updateClientInfo(clientInfoDTO);
         }
-        queueNew.put(clientInfoDTO.getName(), clientInfoDTO);
-
-        serverGui.updateQueueTable();
 
         Logger.log(clientInfoDTO.toString());
         clientInfoDTO.setStatus(ClientStatus.NEW);
-        ClientInfo clientInfo = clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
-        String login = null;
+        clientInfoDTO.setInputFilesFolder("input_files/");
+        clientInfoDTO.setOutputFilesFolder("output_files/");
+        clientInfoDTO.setHandlersCount(7);
+        clientInfoDTO.setHandlerTimeout(20);
+        clientInfoDTO.setThreadsCount(3);
+        clientInfoDTO.setFilePartSize(5);
+        clientInfoDTO.setAliveRequestFrequency(10);
+        clientInfoDTO.setSendFrequency(10);
+        clientInfoRepository.save(clientInfoConverter.convertToEntity(clientInfoDTO));
+        serverGui.updateQueueTable();
+        return clientInfoDTO;
+    }
 
-        clientInfoDTO = serverGui.showNewClientIcon(clientInfoDTO);
-
-        login = clientInfoDTO.getLogin();
-        clientInfo.setLogin(login);
-        clientInfo.setInputFilesFolder("input_files/");
-        clientInfo.setOutputFilesFolder("output_files/");
-        clientInfo.setHandlersCount(7);
-        clientInfo.setHandlerTimeout(20);
-        clientInfo.setThreadsCount(3);
-        clientInfo.setFilePartSize(5);
-        clientInfo.setAliveRequestFrequency(10);
-        clientInfo.setSendFrequency(10);
-        clientInfo.setStatus(ClientStatus.CLIENT_FIRST);
-        clientInfoRepository.save(clientInfo);
-        clientInfoDTO = clientInfoConverter.convertToDto(clientInfo);
-
-        serverGui.hideNewClientIcon(login);
-
-        loginSessionHashMap.put(login, clientInfoDTO);
+    public void addNewClient(Long id, String login) throws RemoteException {
+        ClientInfoDTO clientInfoDTO = clientInfoConverter
+                .convertToDto(clientInfoRepository
+                        .updateNew(id, login, ClientStatus.CLIENT_WORK));
+        //loginSessionHashMap.put(login, clientInfoDTO);
         serverGui.updateClientList();
-        queueNew.remove(clientInfo.getName());
         serverGui.updateQueueTable();
         WebSocketSession registrationSession = registrationSessionHashMap.get(clientInfoDTO.getName());
         try {
@@ -173,10 +150,9 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return clientInfoDTO;
     }
 
-    public boolean loginToServer(String login) throws RemoteException {
+    public boolean login(String login) throws RemoteException {
         if (!clientIsRegistered(login)) {
             return false;
         }
@@ -202,26 +178,25 @@ public class Server {
         return true;
     }
 
-    public void logoutFromServer(String login) {
-        setClientStatus(login, ClientStatus.CLIENT_PAUSE);
+    public void logout(String login) {
+        setClientStatus(login, ClientStatus.CLIENT_WORK); // todo
         Logger.log("Disconnected: " + login);
         loginSessionHashMap.remove(login);
     }
 
-    public void sendTextMessageToServer(String login, String message) {
+    public void saveTextMessage(String login, String message) {
         if (clientIsLoggedIn(login)) {
             TextMessage textMessage = new TextMessage();
             textMessage.setMessage(message);
             textMessage.setClient(clientInfoRepository.findByLogin(login));
             textMessageRepository.save(textMessage);
             Logger.log(login + ": " + textMessage.getMessage());
-            queueTechnical.add(message);
         } else {
             System.out.println(message);
         }
     }
 
-    public boolean sendFileInfoToServer(String login, FileInfoDTO fileInfoDTO) throws RemoteException {
+    public boolean saveFileInfo(String login, FileInfoDTO fileInfoDTO) throws RemoteException {
         if (clientIsLoggedIn(login)) {
             HashMap<String, ArrayList<FilePartDTO>> fileHashMap = new HashMap<>();
             fileHashMap.put(fileInfoDTO.getName(), new ArrayList<>());
@@ -251,7 +226,6 @@ public class Server {
                 e.printStackTrace();
             }
             Logger.log(fileInfoDTO.toString());
-            queueFileInfo.put(fileInfoDTO.getHash(), fileInfoDTO);
             serverGui.updateFileQueue();
             return true;
         } else {
@@ -259,7 +233,7 @@ public class Server {
         }
     }
 
-    public boolean sendFilePartToServer(String login, FilePartDTO filePartDTO) {
+    public boolean saveFilePart(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
             try {
                 String partHash = loadFilePart(login, filePartDTO);
@@ -290,7 +264,7 @@ public class Server {
         }
     }
 
-    public boolean sendFilePartStatusToServer(String login, FilePartDTO filePartDTO) {
+    public boolean saveFilePartStatus(String login, FilePartDTO filePartDTO) {
         if (clientIsLoggedIn(login)) {
             FilePartSent filePartSent = filePartSentRepository
                     .findByHashKeyAndFileInfo_NameAndClient_Login(
@@ -366,6 +340,7 @@ public class Server {
 
     private void sendFilePartStatusToClient(String login, FilePartDTO filePartDTO) {
         WebSocketSession session = clientFilePartStatusSessionHashMap.get(login);
+        filePartDTO.setData(null);
         try {
             synchronized (session) {
                 session
@@ -391,7 +366,6 @@ public class Server {
             return false;
         }
         Logger.log("message sent to : " + login);
-        queueTechnical.add(message);
         serverGui.updateFileQueue();
         return true;
     }
@@ -608,14 +582,7 @@ public class Server {
     }
 
     public ClientInfoDTO setClientStatus(String login, ClientStatus clientStatus) {
-        ClientInfo clientInfo = clientInfoRepository.findByLogin(login);
-        clientInfo.setStatus(clientStatus);
-        ClientInfoDTO clientInfoDTO = loginSessionHashMap.get(login);
-        if (clientInfoDTO != null) {
-            clientInfoDTO.setStatus(clientStatus);
-        }
-        clientInfoRepository.save(clientInfo);
-        return clientInfoDTO;
+        return clientInfoConverter.convertToDto(clientInfoRepository.updateStatus(login, clientStatus));
     }
 
     public List<ClientInfoDTO> getClientInfoDTOList() {

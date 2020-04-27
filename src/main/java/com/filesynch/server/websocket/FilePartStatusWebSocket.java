@@ -6,7 +6,6 @@ import com.filesynch.async.AsyncService;
 import com.filesynch.dto.FilePartDTO;
 import com.filesynch.server.Logger;
 import com.filesynch.server.Server;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -14,7 +13,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
 
 public class FilePartStatusWebSocket extends TextWebSocketHandler {
     private ObjectMapper mapper = new ObjectMapper();
@@ -42,7 +40,7 @@ public class FilePartStatusWebSocket extends TextWebSocketHandler {
             }
             String jsonString = message.getPayload();
             FilePartDTO filePartDTO = mapper.readValue(jsonString, FilePartDTO.class);
-            boolean result = server.sendFilePartStatusToServer(login, filePartDTO);
+            boolean result = server.saveFilePartStatus(login, filePartDTO);
             if (result) {
                 asyncServiceHashMap.get(login).notifyHandler(filePartDTO, true);
             } else {

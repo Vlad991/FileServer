@@ -1,6 +1,7 @@
 package com.filesynch.rmi;
 
 import com.filesynch.dto.ClientInfoDTO;
+import com.filesynch.dto.ClientStatus;
 import com.filesynch.dto.ServerSettingsDTO;
 
 import java.rmi.Remote;
@@ -16,6 +17,8 @@ public interface ServerRmiInt extends Remote {
     public int startServer() throws RemoteException;
 
     public void stopServer() throws RemoteException;
+
+    public void addNewClient(Long id, String login) throws RemoteException;
 
     public void sendMessage(String login, String message) throws RemoteException;
 
