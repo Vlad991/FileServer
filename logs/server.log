@@ -1,0 +1,8 @@
+мая 01, 2020 12:42:38 PM com.filesynch.server.Logger lambda$log$0
+INFO: File Server Started
+мая 01, 2020 12:43:14 PM com.filesynch.server.Logger lambda$log$0
+INFO: /register/vlad: connected
+мая 01, 2020 12:43:14 PM com.filesynch.server.Logger lambda$log$0
+INFO: Not registered: null
+мая 01, 2020 12:43:14 PM com.filesynch.server.Logger lambda$log$0
+INFO: ClientInfoDTO(id=1, login=null, name=vlad, externalIp=109.251.102.212, localIp=127.0.0.1, pcName=MacBook-Air-Vladislav.local, pcModel=OS Name: Mac OS X, OS Type: x86_64, OS Version: 10.15.2, status=NEW, outputFilesFolder=null, inputFilesFolder=null, filePartSize=0, handlersCount=0, handlerTimeout=0, threadsCount=0, sendFrequency=0, aliveRequestFrequency=0)

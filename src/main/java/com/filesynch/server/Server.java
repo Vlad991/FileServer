@@ -12,6 +12,7 @@ import com.filesynch.rmi.ServerGuiInt;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.File;
@@ -26,62 +27,45 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
+@Getter
 public class Server {
-    @Getter
     @Setter
     private ServerGuiInt serverGui;
-    @Getter
-    @Setter
-    private ServerStatus serverStatus;
-    @Getter
-    @Setter
-    private ServerSettings serverSettings;
-    @Getter
+    // Converter
     private ClientInfoConverter clientInfoConverter;
     private FileInfoReceivedConverter fileInfoReceivedConverter;
     private FileInfoSentConverter fileInfoSentConverter;
     private FilePartReceivedConverter filePartReceivedConverter;
     private FilePartSentConverter filePartSentConverter;
     private TextMessageConverter textMessageConverter;
-    @Getter
     private ServerSettingsConverter serverSettingsConverter;
-    @Getter
+    // Repository
     private final ClientInfoRepository clientInfoRepository;
-    @Getter
     private final FileInfoReceivedRepository fileInfoReceivedRepository;
-    @Getter
     private final FileInfoSentRepository fileInfoSentRepository;
-    @Getter
     private final FilePartReceivedRepository filePartReceivedRepository;
-    @Getter
     private final FilePartSentRepository filePartSentRepository;
     private final TextMessageRepository textMessageRepository;
-    @Getter
     private final ServerSettingsRepository serverSettingsRepository;
-    @Getter
+    // Other
+    @Setter
+    private ServerStatus status;
     private HashMap<String, AsyncService> asyncServiceHashMap;
     public static final String CLIENT_LOGIN = "client_login";
     public static final String CLIENT_NAME = "client_name";
     public static final String slash = File.separator;
-    @Getter
     private HashMap<String, WebSocketSession> registrationSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, ClientInfoDTO> loginSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientTextMessageSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientFileInfoSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientFilePartSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientFilePartStatusSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientFileStatusSessionHashMap = new HashMap<>();
-    @Getter
     private HashMap<String, WebSocketSession> clientLoadFileSessionHashMap = new HashMap<>();
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -99,7 +83,7 @@ public class Server {
         filePartSentConverter = new FilePartSentConverter(clientInfoConverter, fileInfoSentConverter);
         textMessageConverter = new TextMessageConverter(clientInfoConverter);
         serverSettingsConverter = new ServerSettingsConverter();
-        serverStatus = ServerStatus.SERVER_STOP;
+        status = ServerStatus.SERVER_STOP;
         this.clientInfoRepository = clientInfoRepository;
         this.fileInfoReceivedRepository = fileInfoReceivedRepository;
         this.fileInfoSentRepository = fileInfoSentRepository;
@@ -108,8 +92,6 @@ public class Server {
         this.textMessageRepository = textMessageRepository;
         this.serverSettingsRepository = serverSettingsRepository;
         serverGui = Main.serverGui;
-        this.serverSettings = serverSettingsRepository.findById(1L).isPresent() ?
-                serverSettingsRepository.findById(1L).get() : null;
         this.asyncServiceHashMap = new HashMap<>();
     }
 
@@ -135,13 +117,21 @@ public class Server {
         return clientInfoDTO;
     }
 
-    public void addNewClient(Long id, String login) throws RemoteException {
-        ClientInfoDTO clientInfoDTO = clientInfoConverter
-                .convertToDto(clientInfoRepository
-                        .updateNew(id, login, ClientStatus.CLIENT_WORK));
-        //loginSessionHashMap.put(login, clientInfoDTO);
-        serverGui.updateClientList();
-        serverGui.updateQueueTable();
+    @Transactional
+    public void addNewClient(Long id, String login) {
+        ClientInfoDTO clientInfoDTO = null;
+        try {
+            clientInfoRepository.updateNew(id, login, ClientStatus.CLIENT_WORK);
+            clientInfoDTO = clientInfoConverter.convertToDto(clientInfoRepository.findByLogin(login));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            serverGui.updateClientList();
+            serverGui.updateQueueTable();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
         WebSocketSession registrationSession = registrationSessionHashMap.get(clientInfoDTO.getName());
         try {
             registrationSession
@@ -353,7 +343,7 @@ public class Server {
     }
 
     public boolean sendTextMessageToClient(String login, String message) throws RemoteException {
-        setServerStatus(ServerStatus.SERVER_WORK);
+        setStatus(ServerStatus.SERVER_WORK);
         WebSocketSession clientTextMessageSession = clientTextMessageSessionHashMap.get(login);
         if (clientTextMessageSession == null) {
             Logger.log("Login not correct");
@@ -371,7 +361,7 @@ public class Server {
     }
 
     public boolean sendAllFilesToClient(String login) {
-        setServerStatus(ServerStatus.SERVER_WORK);
+        setStatus(ServerStatus.SERVER_WORK);
         if (!clientIsLoggedIn(login)) {
             return false;
         }
@@ -400,7 +390,7 @@ public class Server {
             Logger.log("Can't send hidden file");
             return true;
         }
-        setServerStatus(ServerStatus.SERVER_WORK);
+        setStatus(ServerStatus.SERVER_WORK);
         WebSocketSession clientFileInfoSession = clientFileInfoSessionHashMap.get(login);
         WebSocketSession clientFilePartSession = clientFilePartSessionHashMap.get(login);
         if (clientFileInfoSession == null) {
@@ -582,11 +572,34 @@ public class Server {
     }
 
     public ClientInfoDTO setClientStatus(String login, ClientStatus clientStatus) {
-        return clientInfoConverter.convertToDto(clientInfoRepository.updateStatus(login, clientStatus));
+        clientInfoRepository.updateStatus(login, clientStatus);
+        return clientInfoConverter.convertToDto(clientInfoRepository.findByLogin(login));
     }
 
     public List<ClientInfoDTO> getClientInfoDTOList() {
         return clientInfoConverter.convertToListDto(clientInfoRepository.findAll());
+    }
+
+    public ClientInfoDTO getClientInfoDTO(String login) {
+        return clientInfoConverter.convertToDto(clientInfoRepository.findByLogin(login));
+    }
+
+    public ServerSettingsDTO getServerSettingsDTO() {
+        if (serverSettingsRepository.findById(1L).isPresent())
+            return serverSettingsConverter.convertToDto(serverSettingsRepository.findById(1L).get());
+        return null;
+    }
+
+    public void setServerSettings(ServerSettingsDTO serverSettingsDTO) {
+        Optional<ServerSettings> settingsOpt = serverSettingsRepository.findById(1L);
+        ServerSettings settings;
+        if (settingsOpt.isEmpty()) {
+            settings = serverSettingsConverter.convertToEntity(serverSettingsDTO);
+        } else {
+            settings = serverSettingsConverter.convertToEntity(serverSettingsDTO);
+            settings.setId(settingsOpt.get().getId());
+        }
+        serverSettingsRepository.save(settings);
     }
 
     public ClientInfoDTO updateClientInfo(ClientInfoDTO clientInfoDTO) {

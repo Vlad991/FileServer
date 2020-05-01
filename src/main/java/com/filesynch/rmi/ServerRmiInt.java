@@ -1,7 +1,6 @@
 package com.filesynch.rmi;
 
 import com.filesynch.dto.ClientInfoDTO;
-import com.filesynch.dto.ClientStatus;
 import com.filesynch.dto.ServerSettingsDTO;
 
 import java.rmi.Remote;
@@ -37,6 +36,8 @@ public interface ServerRmiInt extends Remote {
     public void setClientSettings(ClientInfoDTO clientInfoDTO) throws RemoteException;
 
     public ClientInfoDTO getClientSettings(String login) throws RemoteException;
+
+    public ClientInfoDTO getClientSettings(Long id) throws RemoteException;
 
     public boolean getQueueNewStatus() throws RemoteException;
 

@@ -2,7 +2,6 @@ package com.filesynch.rmi;
 
 import com.filesynch.Main;
 import com.filesynch.dto.ClientInfoDTO;
-import com.filesynch.dto.ClientStatus;
 import com.filesynch.dto.ServerSettingsDTO;
 import com.filesynch.dto.ServerStatus;
 import com.filesynch.entity.ClientInfo;
@@ -42,7 +41,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
 
     @Override
     public String getServerStatus() throws RemoteException {
-        if (server != null && server.getServerStatus() == ServerStatus.SERVER_WORK) {
+        if (server != null && server.getStatus() == ServerStatus.SERVER_WORK) {
             return String.valueOf(port);
         } else {
             return null;
@@ -58,22 +57,15 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
 
     @Override
     public int startServer() {
-        if (server == null || server.getServerStatus() == ServerStatus.SERVER_STOP) {
+        if (server == null || server.getStatus() == ServerStatus.SERVER_STOP) {
             try {
                 ctx = SpringApplication.run(Main.class, stringArgs);
                 server = ctx.getBean(com.filesynch.server.Server.class);
                 Main.server = server;
-                //server.filePartHashMap = new HashMap<>();
-//                server.queueNew = new HashMap<>();
-//                server.queueTechnical = new ArrayList<>();
-//                server.queueAlive = new HashMap<>();
-//                server.queueFileInfo = new HashMap<>();
-//                server.queueFiles = new HashMap<>();
-//                server.queueFileParts = new HashMap<>();
                 environment = ctx.getBean(Environment.class);
                 port = Integer.parseInt(environment.getProperty("server.port"));
                 Logger.log("File Server Started");
-                server.setServerStatus(ServerStatus.SERVER_WORK);
+                server.setStatus(ServerStatus.SERVER_WORK);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -84,7 +76,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
 
     @Override
     public void stopServer() {
-        if (server != null && server.getServerStatus() == ServerStatus.SERVER_WORK) {
+        if (server != null && server.getStatus() == ServerStatus.SERVER_WORK) {
             try {
                 String uri = "http://localhost:" + port + "/actuator/shutdown";
                 HttpHeaders headers = new HttpHeaders();
@@ -96,7 +88,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
                 Logger.log(responseEntity.getBody());
                 SpringApplication.exit(ctx);
                 Logger.log("File Server Stopped");
-                server.setServerStatus(ServerStatus.SERVER_STOP);
+                server.setStatus(ServerStatus.SERVER_STOP);
             } catch (Exception e) {
                 Logger.log("File Server NOT Stopped");
                 e.printStackTrace();
@@ -105,7 +97,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
     }
 
     @Override
-    public void addNewClient(Long id, String login) throws RemoteException {
+    public void addNewClient(Long id, String login) {
         server.addNewClient(id, login);
     }
 
@@ -141,15 +133,7 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
 
     @Override
     public void setSettings(ServerSettingsDTO settingsDTO) {
-        Optional<ServerSettings> settingsOpt = server.getServerSettingsRepository().findById(1L);
-        ServerSettings settings;
-        if (settingsOpt.isEmpty()) {
-            settings = server.getServerSettingsConverter().convertToEntity(settingsDTO);
-        } else {
-            settings = server.getServerSettingsConverter().convertToEntity(settingsDTO);
-            settings.setId(settingsOpt.get().getId());
-        }
-        server.setServerSettings(server.getServerSettingsRepository().save(settings));
+        server.setServerSettings(settingsDTO);
     }
 
     @Override
@@ -182,6 +166,11 @@ public class ServerRmi extends UnicastRemoteObject implements ServerRmiInt {
     @Override
     public ClientInfoDTO getClientSettings(String login) {
         return server.getClientInfoConverter().convertToDto(server.getClientInfoRepository().findByLogin(login));
+    }
+
+    @Override
+    public ClientInfoDTO getClientSettings(Long id) throws RemoteException {
+        return server.getClientInfoConverter().convertToDto(server.getClientInfoRepository().findById(id).get());
     }
 
     @Override

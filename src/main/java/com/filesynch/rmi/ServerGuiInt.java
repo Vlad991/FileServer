@@ -16,10 +16,6 @@ public interface ServerGuiInt extends Remote {
 
     public void logRed(String stringToLog) throws RemoteException;
 
-    public ClientInfoDTO showNewClientIcon(ClientInfoDTO clientInfoDTO) throws RemoteException;
-
-    public void hideNewClientIcon(String login) throws RemoteException;
-
     public void updateClientList() throws RemoteException;
 
     public void updateFileQueue() throws RemoteException;

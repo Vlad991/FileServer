@@ -14,11 +14,11 @@ public interface ClientInfoRepository extends JpaRepository<ClientInfo, Long> {
 
     @Modifying
     @Query("UPDATE ClientInfo c SET c.status = :status WHERE c.login = :login")
-    ClientInfo updateStatus(@Param("login") String login, @Param("status") ClientStatus status);
+    void updateStatus(@Param("login") String login, @Param("status") ClientStatus status);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE ClientInfo c SET c.login = :login, c.status = :status WHERE c.id = :id")
-    ClientInfo updateNew(@Param("id") Long id,
-                   @Param("login") String login,
-                   @Param("status") ClientStatus status);
+    void updateNew(@Param("id") Long id,
+                         @Param("login") String login,
+                         @Param("status") ClientStatus status);
 }

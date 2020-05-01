@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import javax.persistence.Column;
 import java.io.Serializable;
 
 @Getter
@@ -14,6 +13,7 @@ import java.io.Serializable;
 @ToString
 public class ClientInfoDTO implements Serializable {
     static final long serialVersionUID = 10L;
+    private Long id;
     private String login;
     private String name;
     private String externalIp;
